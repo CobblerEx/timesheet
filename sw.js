@@ -1,4 +1,4 @@
-const CACHE = 'timesheet-1780355238344';
+const CACHE = 'timesheet-1780441155328';
 const FILES = [
   './index.html',
   './manifest.json',
