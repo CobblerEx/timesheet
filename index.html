@@ -9151,6 +9151,16 @@
           return s.replace(/\b\w/g, c => c.toUpperCase());
         }
 
+        // Convert 12-hour h/m/period → "HH:MM" (24-hour)
+        function ampmTo24(h, m, period) {
+          let hh = parseInt(h);
+          const mm = m ? parseInt(m) : 0;
+          const p = (period || '').toLowerCase();
+          if (p === 'am' && hh === 12) hh = 0;        // 12 AM → midnight
+          else if (p === 'pm' && hh !== 12) hh += 12; // 1–11 PM → add 12
+          return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+        }
+
         // ── Parser ────────────────────────────────────────────────────────────
         function parseText(raw) {
           if (!raw || !raw.trim()) return [];
@@ -9162,6 +9172,22 @@
             // "may21" → "may 21"
             .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*(\d{1,2})\b/gi,
               (_, mon, d) => `${mon} ${d}`);
+
+          // Normalise AM/PM ranges to 24-hour HH:MM-HH:MM so TIME_RE picks them up
+          // "to" or "-" separator: "8 AM to 5 PM", "8:30am-5:30pm"
+          text = text.replace(
+            /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b\s*(?:to|-)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi,
+            function(_, h1, m1, p1, h2, m2, p2) {
+              return ampmTo24(h1, m1, p1) + '-' + ampmTo24(h2, m2, p2);
+            }
+          );
+          // Space-only separator: "8 am 9 am gas line"
+          text = text.replace(
+            /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi,
+            function(_, h1, m1, p1, h2, m2, p2) {
+              return ampmTo24(h1, m1, p1) + '-' + ampmTo24(h2, m2, p2);
+            }
+          );
 
           // Patterns
           const TIME_RE   = /\b(\d{1,2}(?::\d{2})?)\s*-\s*(\d{1,2}(?::\d{2})?)/g;
@@ -9244,11 +9270,17 @@
             }
           }
 
-          // Forward-fill: carry last known date to undated entries that follow
+          // Forward-fill: carry last known date to undated entries that follow.
+          // Any still undated after that → assume today.
+          const todayStr = (() => {
+            const t = new Date();
+            return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+          })();
           let lastDate = null;
           for (const e of built) {
             if (e.dateStr) lastDate = e.dateStr;
             else if (lastDate) e.dateStr = lastDate;
+            else e.dateStr = todayStr; // no date at all → today
           }
 
           // Step 5 — split desc into jobName / address
@@ -9257,14 +9289,21 @@
             .map(e => {
               let desc = e.desc;
               let jobName = '', address = '';
+              // Comma separator takes priority: "gas line, 1212 Lakeshore"
+              if (desc.includes(',')) {
+                const ci = desc.indexOf(',');
+                jobName = titleCase(desc.slice(0, ci).trim());
+                address = titleCase(desc.slice(ci + 1).trim());
               // If starts with a number → likely address first, then job type
-              const streetRE = /^(\d+\s+[\w\s]+?(?:\b(?:rd|st|ave|dr|line|blvd|cres|ct|way|ln|pl|unit\s*\d+|unit\s*#\d+)\b[,\s]*\d*))\s+(.+)$/i;
-              const sm = desc.match(streetRE);
-              if (sm) {
-                address = titleCase(sm[1].trim().replace(/[,\s]+$/, ''));
-                jobName = titleCase(sm[2].trim());
               } else {
-                jobName = titleCase(desc);
+                const streetRE = /^(\d+\s+[\w\s]+?(?:\b(?:rd|st|ave|dr|line|blvd|cres|ct|way|ln|pl|unit\s*\d+|unit\s*#\d+)\b[,\s]*\d*))\s+(.+)$/i;
+                const sm = desc.match(streetRE);
+                if (sm) {
+                  address = titleCase(sm[1].trim().replace(/[,\s]+$/, ''));
+                  jobName = titleCase(sm[2].trim());
+                } else {
+                  jobName = titleCase(desc);
+                }
               }
               jobName = jobName.replace(/^[-\s]+|[-\s]+$/g, '').trim() || 'Service';
               address = address.replace(/^[-\s]+|[-\s]+$/g, '').trim();
