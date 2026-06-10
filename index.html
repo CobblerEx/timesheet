@@ -7599,7 +7599,9 @@
 
         // ── Open mail client FIRST while the user gesture is still fresh ──
         // (any await before this can cause iOS/PWA to silently drop the navigation)
-        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        // mailto: requires CRLF (\r\n) for line breaks — bare \n is ignored by mail clients
+        const crlfBody = body.replace(/\n/g, '\r\n');
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(crlfBody)}`;
         window.location.href = mailto;
 
         // ── Generate & auto-download the PDF after the mail client is triggered ──
