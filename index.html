@@ -7574,7 +7574,7 @@
       // Deposit field — live update running total
       document.getElementById('depositAmount').addEventListener('input', updateInvoiceRunningTotal);
 
-      // Email Draft button — generates invoice PDF then opens mailto
+      // Email Draft button — opens mailto first (preserves user-gesture), then generates & downloads PDF
       document.getElementById('emailDraftBtn').addEventListener('click', async function() {
         const to      = (document.getElementById('clientEmail').value || '').trim();
         const name    = (document.getElementById('clientName').value  || 'there').trim();
@@ -7595,9 +7595,14 @@
         }
         body += `\ne-Transfer accepted at Jason@archerser.ca\n\n`;
         body += `Thank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
+        body += `\n\n[PDF invoice attached]`;
 
-        // Generate PDF and auto-download it so the user can attach it
-        let pdfNote = '';
+        // ── Open mail client FIRST while the user gesture is still fresh ──
+        // (any await before this can cause iOS/PWA to silently drop the navigation)
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailto;
+
+        // ── Generate & auto-download the PDF after the mail client is triggered ──
         try {
           const result = await generateInvoicePdf('customer', { returnBlob: true });
           if (result?.blob) {
@@ -7608,20 +7613,12 @@
             document.body.appendChild(a);
             a.click();
             setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
-            pdfNote = `\n\n📎 Invoice PDF saved to Downloads — please attach "${result.filename}" to the email before sending.`;
+            // Small delay so the alert doesn't interfere with the mail app opening
+            setTimeout(() => alert(`📎 Invoice PDF downloaded — please attach "${result.filename}" to the email before sending.`), 800);
           }
         } catch (err) {
           console.warn('PDF generation skipped for email draft:', err);
         }
-
-        if (pdfNote) alert(pdfNote.trim());
-
-        const encodedBody = (body + (pdfNote ? '\n\n[PDF invoice attached]' : ''))
-          .split('\n')
-          .map(line => encodeURIComponent(line))
-          .join('%0D%0A');
-        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodedBody}`;
-        window.location.href = mailto;
       });
 
 
