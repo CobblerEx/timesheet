@@ -93,6 +93,32 @@
         background: rgba(255,69,0,.2);
         margin: .1rem 0;
       }
+      .iag-three {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: .55rem;
+      }
+      .iag-three .mini-btn { width: 100%; margin: 0; justify-content: center; }
+      .iag-sub-panel {
+        display: none;
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr 1fr;
+        gap: .55rem;
+        padding: .5rem .55rem;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 8px;
+      }
+      .iag-sub-panel.open { display: grid; }
+      .iag-sub-panel .mini-btn  { width: 100%; margin: 0; justify-content: center; }
+      .iag-sub-panel .iag-full  { grid-column: 1 / -1; }
+      .iag-toggle-btn {
+        background: #2e2e2e;
+        color: #bbb;
+        border: 1px solid rgba(255,255,255,.12);
+      }
+      .iag-toggle-btn.open { color: #e0e0e0; border-color: rgba(255,255,255,.22); }
       .mini-btn {padding:.5rem .8rem;font-size:.9rem;}
       .items-table td,.items-table th {vertical-align:middle;}
       .items-table input {min-width:90px;}
@@ -1776,23 +1802,30 @@
         </div>
 
         <div class="inline-group invoice-action-grid" style="margin-top:1rem;">
-          <!-- Row 1: primary workflow -->
-          <button type="button" id="populateInvoice" class="mini-btn iag-full">Auto Fill From Selected Entries</button>
-          <!-- Row 2: add items -->
-          <button type="button" id="addItem" class="mini-btn">Add Item</button>
-          <button type="button" id="quickAddMaterials" class="mini-btn" style="background:#17a2b8;">⚡ Quick Add</button>
-          <button type="button" id="openMatTemplates" class="mini-btn iag-full" style="background:#6f42c1;">📋 Load From Job Template</button>
-          <button type="button" id="saveAsTemplate" class="mini-btn iag-full" style="background:#5a3f9a;">💾 Save Items as Template</button>
+          <!-- Row 1: add items + templates toggle (3-col) -->
+          <div class="iag-three">
+            <button type="button" id="addItem" class="mini-btn">Add Item</button>
+            <button type="button" id="quickAddMaterials" class="mini-btn" style="background:#17a2b8;">⚡ Quick Add</button>
+            <button type="button" id="iagTemplatesToggle" class="mini-btn iag-toggle-btn">📋 Templates ▾</button>
+          </div>
+          <!-- Templates sub-panel -->
+          <div class="iag-sub-panel" id="iagTemplatesPanel">
+            <button type="button" id="openMatTemplates" class="mini-btn iag-full" style="background:#6f42c1;">📋 Load From Job Template</button>
+            <button type="button" id="saveAsTemplate" class="mini-btn iag-full" style="background:#5a3f9a;">💾 Save Items as Template</button>
+          </div>
           <!-- Divider -->
           <div class="iag-divider"></div>
-          <!-- Row 3: primary output -->
+          <!-- Primary output -->
           <button id="generateInvoice" type="button" class="mini-btn iag-full">Generate Invoice PDF</button>
-          <!-- Row 4: secondary outputs -->
-          <button id="generateBossCopy" type="button" class="mini-btn">Boss Copy PDF</button>
-          <button id="emailDraftBtn" type="button" class="mini-btn" style="background:#17a2b8;">📧 Email Draft</button>
-          <!-- Row 4b: quote info -->
-          <button id="generateBossQuote" type="button" class="mini-btn iag-full" style="background:#e67e00;">📋 Boss Quote Info PDF</button>
-          <!-- Row 5: destructive -->
+          <!-- Other Exports toggle -->
+          <button id="iagExportsToggle" type="button" class="mini-btn iag-full iag-toggle-btn">Other Exports ▾</button>
+          <!-- Exports sub-panel -->
+          <div class="iag-sub-panel" id="iagExportsPanel">
+            <button id="generateBossCopy" type="button" class="mini-btn">Boss Copy PDF</button>
+            <button id="emailDraftBtn" type="button" class="mini-btn" style="background:#17a2b8;">📧 Email Draft</button>
+            <button id="generateBossQuote" type="button" class="mini-btn iag-full" style="background:#e67e00;">📋 Boss Quote Info PDF</button>
+          </div>
+          <!-- Destructive -->
           <button type="button" id="clearInvoice" class="mini-btn iag-full" style="background:#dc3545;">Clear Invoice</button>
         </div>
 
@@ -2524,6 +2557,21 @@
       }
 
       document.addEventListener('DOMContentLoaded', () => {
+        // ── Invoice action grid toggles ────────────────────────────────────
+        document.getElementById('iagTemplatesToggle')?.addEventListener('click', function() {
+          const panel = document.getElementById('iagTemplatesPanel');
+          const open = panel.classList.toggle('open');
+          this.classList.toggle('open', open);
+          this.textContent = open ? '📋 Templates ▴' : '📋 Templates ▾';
+        });
+        document.getElementById('iagExportsToggle')?.addEventListener('click', function() {
+          const panel = document.getElementById('iagExportsPanel');
+          const open = panel.classList.toggle('open');
+          this.classList.toggle('open', open);
+          this.textContent = open ? 'Other Exports ▴' : 'Other Exports ▾';
+        });
+        // ──────────────────────────────────────────────────────────────────
+
         document.getElementById('undoDeleteBtn')?.addEventListener('click', () => {
           // Generic restore callback (materials / clients / locations)
           if (_undoRestoreFn) {
@@ -6751,7 +6799,7 @@
       document.getElementById('savedMaterialsSearch').addEventListener('input', debounce((e) => renderSavedMaterialsList(e.target.value), 200));
       document.getElementById('savedMaterialsSort')?.addEventListener('change', () => renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || ''));
       document.getElementById('savedMaterialsModal').addEventListener('click', (e) => { if (e.target.id === 'savedMaterialsModal') closeSavedMaterialsModal(); });
-      document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
+
       document.getElementById('clearInvoice').onclick = () => clearInvoice();
       document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
       document.getElementById('appendInvoiceDraft').onclick = () => appendWorkToLoadedDraft();
