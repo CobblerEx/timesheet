@@ -1,7 +1,7 @@
 // ── Timesheet PWA — Service Worker ──────────────────────────────────────────
 // Bump the cache name any time you deploy updated files so old caches are
 // cleared automatically on the next visit.
-const CACHE = 'timesheet-v11';
+const CACHE = 'timesheet-v12';
 
 // App shell + all CDN assets needed to run fully offline
 const FILES = [
