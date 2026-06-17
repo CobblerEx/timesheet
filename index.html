@@ -1798,7 +1798,7 @@
 
         <div class="invoice-grid" style="margin-top:1rem;">
           <label>Client Name: <input type="text" id="clientName" list="clientNameList" placeholder="Customer name" autocomplete="off"><datalist id="clientNameList"></datalist></label>
-          <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
+          <label>Client Phone: <input type="tel" id="clientPhone" placeholder="Phone number"></label>
           <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
           <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
           <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="110"></label>
@@ -6730,7 +6730,7 @@
         }
       };
 
-      document.getElementById('addItem').onclick = () => createItemRow({ markup: getDefaultMarkupPercent() });
+      document.getElementById('addItem').onclick = () => { const row = createItemRow({ markup: getDefaultMarkupPercent() }); setTimeout(() => row.querySelector('.item-desc')?.focus(), 0); };
       document.getElementById('manageSavedMaterials').onclick = () => openSavedMaterialsModal();
 
       // Service charge default — load saved value and wire apply button
