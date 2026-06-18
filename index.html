@@ -6730,7 +6730,7 @@
         }
       };
 
-      document.getElementById('addItem').onclick = () => { const row = createItemRow({ markup: getDefaultMarkupPercent() }); row.querySelector('.item-desc')?.focus(); };
+      document.getElementById('addItem').onclick = () => { const row = createItemRow({ markup: getDefaultMarkupPercent() }); const desc = row.querySelector('.item-desc'); if (desc) { desc.focus({ preventScroll: true }); desc.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } };
       document.getElementById('manageSavedMaterials').onclick = () => openSavedMaterialsModal();
 
       // Service charge default — load saved value and wire apply button
