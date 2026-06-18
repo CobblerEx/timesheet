@@ -6730,7 +6730,7 @@
         }
       };
 
-      document.getElementById('addItem').onclick = () => { const row = createItemRow({ markup: getDefaultMarkupPercent() }); setTimeout(() => row.querySelector('.item-desc')?.focus(), 0); };
+      document.getElementById('addItem').onclick = () => { const row = createItemRow({ markup: getDefaultMarkupPercent() }); row.querySelector('.item-desc')?.focus(); };
       document.getElementById('manageSavedMaterials').onclick = () => openSavedMaterialsModal();
 
       // Service charge default — load saved value and wire apply button
