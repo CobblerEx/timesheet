@@ -3842,8 +3842,7 @@
           // Compute totals
           let totalReg = 0, totalOT = 0;
           dayEntries.forEach(e => {
-            const hrs = timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn);
-            const { regular, overtime } = calcRegularAndOvertime({ ...e, dateStr: e.dateStr || dateStr });
+            const { regular, overtime } = getHoursBreakdown({ ...e, dateStr: e.dateStr || dateStr });
             totalReg += regular;
             totalOT  += overtime;
           });
@@ -3852,7 +3851,7 @@
             .slice()
             .sort((a, b) => (a.timeIn || '').localeCompare(b.timeIn || ''))
             .map(e => {
-              const { regular, overtime } = calcRegularAndOvertime({ ...e, dateStr: e.dateStr || dateStr });
+              const { regular, overtime } = getHoursBreakdown({ ...e, dateStr: e.dateStr || dateStr });
               return [
                 to12hr(e.timeIn),
                 to12hr(e.timeOut),
@@ -4101,7 +4100,22 @@
               { label: 'Combustion analysis',     desc: 'Performed combustion analysis to verify safe and efficient burner operation.' , group: 'Maintenance' },
               { label: 'Inducer motor check',     desc: 'Inspected and tested inducer motor for proper operation and airflow.' , group: 'Maintenance' },
               { label: 'Replace capacitor',      desc: 'Tested and replaced blower and inducer motor capacitors as needed.' , group: 'Repair' },
-              
+              { label: 'Inducer motor replacement', desc: 'Replaced inducer motor after confirming insufficient draft to close pressure switch and worn motor bearings.' , group: 'Repair' },
+              { label: 'Pressure switch replacement', desc: 'Tested and replaced stuck-open pressure switch.' , group: 'Repair' },
+              { label: 'Ignitor replacement',     desc: 'Replaced failed hot surface ignitor after confirming open circuit on ohm test.' , group: 'Repair' },
+              { label: 'Gas valve replacement',   desc: "Replaced gas valve after confirming incorrect manifold pressure or no response on call for heat." , group: 'Repair' },
+              { label: 'Heat exchanger replacement', desc: 'Removed and replaced cracked or corroded heat exchanger.' , group: 'Repair' },
+              { label: 'Flame sensor service',    desc: 'Cleaned or replaced flame sensor after confirming flame was not being sensed properly.' , group: 'Repair' },
+              { label: 'No-heat diagnostic',      desc: 'Diagnosed no-heat call by checking thermostat call, control board fault codes, and safety circuit.' , group: 'Repair' },
+              { label: 'Uninstall furnace',       desc: 'Removed existing furnace and disconnected gas, electrical, and venting connections.' , group: 'Install' },
+              { label: 'Set & connect furnace',   desc: 'Set new furnace in place, leveled and secured, and connected to existing supply and return plenum.' , group: 'Install' },
+              { label: 'Ductwork fabrication',    desc: 'Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape.' , group: 'Install' },
+              { label: 'CSA 636 venting',         desc: 'Ran new CSA 636 certified flue exhaust and combustion air intake pipe through exterior wall with approved termination caps.' , group: 'Install' },
+              { label: 'Gas connection & drip leg', desc: 'Connected gas supply line and installed drip leg per code.' , group: 'Install' },
+              { label: 'Thermostat & electrical', desc: 'Wired new thermostat, connected electrical disconnect, and verified low voltage control wiring.' , group: 'Install' },
+              { label: 'Condensate drain',        desc: 'Ran condensate drain line with trap to an approved drainage point.' , group: 'Install' },
+              { label: 'Startup & CO verification', desc: 'Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.' , group: 'Install' },
+              { label: 'LP conversion',           desc: "Converted manifold and gas valve for propane (LP) gas operation per manufacturer's conversion kit." , group: 'Install' },
             ],
             'Air Conditioner': [
               { label: 'Filter cleaning',             desc: 'Cleaned air filter to restore proper airflow.' , group: 'Maintenance' },
@@ -4124,7 +4138,12 @@
               { label: 'replace capacitor',          desc: 'Tested and replaced run capacitor as needed.' , group: 'Repair' },
               { label: 'replaced contactor',         desc: 'Inspected and replaced contactors as needed due to pitting or burning.' , group: 'Repair' },
               { label: 'Added Leak Sealant',          desc: 'Added refrigerant leak sealant to system to seal minor leaks.' , group: 'Repair' },
-
+              { label: 'Mount evaporator coil',       desc: 'Mounted indoor evaporator coil on furnace plenum with sheet metal transitions and sealed all duct connections with aluminum tape.' , group: 'Install' },
+              { label: 'Set condenser pad',            desc: 'Set outdoor condenser on pad and leveled for proper drainage.' , group: 'Install' },
+              { label: 'Disconnect & whip',            desc: 'Installed disconnect box and electrical whip for outdoor unit.' , group: 'Install' },
+              { label: 'Insulate & seal line set',     desc: 'Insulated and sealed all line set penetrations and openings.' , group: 'Install' },
+              { label: 'Blown fuse diagnostic',        desc: 'Diagnosed no-cooling complaint by checking 24V control circuit and found blown fuse; replaced and verified cause.' , group: 'Repair' },
+              { label: 'Disconnect replacement',       desc: 'Replaced damaged or missing disconnect after confirming loss of power to unit.' , group: 'Repair' },
             ],
             'Mini-Split System': [
               { label: 'Filter cleaning',          desc: 'Removed and cleaned indoor unit filters to restore proper airflow.' , group: 'Maintenance' },
@@ -4135,6 +4154,14 @@
               { label: 'Fan motor service',        desc: 'Inspected indoor and outdoor fan motors and verified proper operation.' , group: 'Maintenance' },
               { label: 'Refrigerant recharge',     desc: 'Recharged system with refrigerant to manufacturer-specified operating pressures.' , group: 'Repair' },
               { label: 'Condensate pump service',  desc: 'Inspected and serviced condensate pump and tested float switch operation.' , group: 'Maintenance' },
+              { label: 'Mount indoor air handler', desc: 'Mounted indoor air handler on interior wall at designated location.' , group: 'Install' },
+              { label: 'Run line set & wiring',    desc: 'Ran refrigerant line set, communication wire, and condensate drain through wall sleeve to exterior.' , group: 'Install' },
+              { label: 'Set outdoor unit',         desc: 'Set outdoor unit on wall mounting bracket with vibration isolators.' , group: 'Install' },
+              { label: 'Flare & pressure test',    desc: 'Cut and flared refrigerant line connections, pressure tested to 400 PSI, and evacuated to 500 microns.' , group: 'Install' },
+              { label: 'Open valves & wire controls', desc: 'Opened condenser suction and discharge valves, installed outdoor disconnect, and wired all control connections.' , group: 'Install' },
+              { label: 'System test',              desc: 'Tested system in cooling, heating, auto, and fan modes and verified proper operation.' , group: 'Install' },
+              { label: 'Uninstall existing system', desc: 'Reclaimed refrigerant charge, uninstalled indoor head and outdoor condenser, and removed old line set and track.' , group: 'Install' },
+              { label: 'Unit removal assist',      desc: 'Assisted with removal of unit after refrigerant leak check found no source of leak.' , group: 'Repair' },
             ],
             'Rooftop Unit': [
               { label: 'Filter replacement',    desc: 'Replaced air filters to restore proper airflow and system efficiency.' , group: 'Maintenance' },
@@ -4148,6 +4175,15 @@
               { label: 'Bearing lubrication',   desc: 'Lubricated all motor and blower shaft bearings.' , group: 'Maintenance' },
               { label: 'replace Capacitors',    desc: 'Tested and replaced run and start capacitors as needed.' , group: 'Repair' },
               { label: 'replaced Contactors',   desc: 'Inspected and replaced contactors as needed due to pitting or burning.' , group: 'Repair' },
+              { label: 'Low-pressure fault diagnostic', desc: 'Diagnosed low-pressure fault on compressor circuit; checked charge and added refrigerant to manufacturer specification.' , group: 'Repair' },
+              { label: 'Filter dryer & line repair', desc: 'Cut out restricted filter dryer and damaged copper line section, sweat in new copper line and filter dryer, pressure tested and evacuated system.' , group: 'Repair' },
+              { label: 'Bearing/motor noise diagnostic', desc: 'Diagnosed squealing or grinding noise to motor bearings; sourced replacement motor.' , group: 'Repair' },
+              { label: 'Wiring short repair',    desc: 'Located and repaired chafed or shorted low-voltage wiring causing unit lockout.' , group: 'Repair' },
+              { label: 'Economizer/damper repair', desc: 'Inspected and repaired economizer damper linkage after confirming improper modulation.' , group: 'Repair' },
+              { label: 'Supply air temp balancing', desc: 'Inspected diffusers and adjusted supply branch to correct excessive supply air temperature in one zone.' , group: 'Repair' },
+              { label: 'Curb & unit set',       desc: 'Set new rooftop unit on curb adapter and secured per manufacturer specifications.' , group: 'Install' },
+              { label: 'Ductwork & electrical connection', desc: 'Connected supply/return ductwork and electrical/gas service to new unit.' , group: 'Install' },
+              { label: 'Startup & commissioning', desc: 'Charged system to specification, started unit, and verified proper operation across all stages.' , group: 'Install' },
             ],
             'Heat Pump': [
               { label: 'Defrost cycle check',    desc: 'Tested defrost control and verified proper defrost cycle operation.' , group: 'Maintenance' },
@@ -4158,6 +4194,8 @@
               { label: 'Capacitor check',        desc: 'Tested run and start capacitors and verified within rated specifications.' , group: 'Maintenance' },
               { label: 'Thermostat calibration', desc: 'Calibrated thermostat and verified accurate temperature control.' , group: 'Maintenance' },
               { label: 'Auxiliary heat check',   desc: 'Tested auxiliary heat strips and verified proper operation.' , group: 'Maintenance' },
+              { label: 'Reversing valve replacement', desc: 'Replaced reversing valve after confirming unit stuck in one mode of operation.' , group: 'Repair' },
+              { label: 'Defrost board replacement', desc: 'Replaced defrost control board after confirming unit was not initiating defrost cycle.' , group: 'Repair' },
             ],
             'Gas Line': [
               { label: 'Pressure test',               desc: 'Performed pressure test on gas piping according to gas code.' , group: 'Maintenance' },
@@ -4166,7 +4204,17 @@
               { label: 'Line purge',                  desc: 'Purged gas line of air to ensure proper gas flow.' , group: 'Maintenance' },
               { label: 'Regulator check',             desc: 'Inspected and tested gas pressure regulator for proper operation and output pressure.' , group: 'Maintenance' },
               { label: 'Bonding / grounding check',   desc: 'Verified bonding and grounding of gas piping as per code requirements.' , group: 'Maintenance' },
-              { label: 'Gas line inspection',         desc: 'Inspected gas line for damage, corrosion, or blockages.' , group: 'Maintenance' }
+              { label: 'Gas line inspection',         desc: 'Inspected gas line for damage, corrosion, or blockages.' , group: 'Maintenance' },
+              { label: 'Black iron pipe run',         desc: 'Installed new black iron gas piping from meter to appliance location per code.' , group: 'Install' },
+              { label: 'Underground gas line',        desc: 'Installed underground gas line and pressure tested per code.' , group: 'Install' },
+              { label: 'Shutoff valve install',       desc: 'Installed new shutoff valves at supply and appliance connection points.' , group: 'Install' },
+              { label: 'Drip leg & sediment trap',    desc: 'Installed drip leg and sediment trap on gas supply line.' , group: 'Install' },
+              { label: 'Pressure test & leak check',  desc: 'Pressure tested new gas piping per code and leak checked all joints with approved solution.' , group: 'Install' },
+              { label: 'Paint & protect piping',      desc: 'Painted exposed gas piping with rust-protection paint per code.' , group: 'Install' },
+              { label: 'Cap / disconnect old line',   desc: 'Capped and disconnected old gas line and leak tested cap.' , group: 'Install' },
+              { label: 'Hookup to meter & appliance',  desc: 'Connected new gas line to meter and appliance, purged line of air, and confirmed proper gas flow.' , group: 'Install' },
+              { label: 'Quote new gas line',          desc: 'Measured and inspected for new gas line installation; sent measurements and pipe sizing to supplier for quote.' , group: 'Misc' },
+              { label: 'Correct gas infraction',      desc: 'Corrected gas piping infraction noted by inspector and signed off infraction notice.' , group: 'Misc' },
             ],
             'Water Heater': [
               { label: 'Anode rod check',        desc: 'Inspected sacrificial anode rod and replaced due to depletion.' , group: 'Maintenance' },
@@ -4177,6 +4225,15 @@
               { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly, thermocouple, and gas valve.' , group: 'Maintenance' },
               { label: 'Flue inspection',        desc: 'Inspected flue pipe for proper draft, blockages, and corrosion.' , group: 'Maintenance' },
               { label: 'Dip tube check',         desc: 'Inspected dip tube for cracks or breakage.' , group: 'Maintenance' },
+              { label: 'Remove existing unit',   desc: 'Removed existing water heater and disconnected gas/electrical, water, and venting connections.' , group: 'Install' },
+              { label: 'Install tankless unit',  desc: 'Installed new condensing tankless water heater. Ran 2-pipe CSA 636 direct-vent through exterior wall for exhaust and combustion air intake.' , group: 'Install' },
+              { label: 'Connect water & gas',    desc: 'Connected gas, cold water inlet, and hot water outlet with isolation valves.' , group: 'Install' },
+              { label: 'Condensate drain (tankless)', desc: 'Installed condensate drain for condensing unit.' , group: 'Install' },
+              { label: 'Commission & test',      desc: 'Commissioned unit, set temperature, tested flow rate at multiple fixtures, and verified error-free operation.' , group: 'Install' },
+              { label: 'Install tank unit',      desc: 'Installed new tank-style water heater, connected T&P relief valve and drain pan.' , group: 'Install' },
+              { label: 'Check valve replacement', desc: 'Replaced recirculation check valve after confirming lukewarm water due to internal recirculation.' , group: 'Repair' },
+              { label: 'No-ignition diagnostic', desc: 'Diagnosed unit not staying lit by inspecting ignitor, flame sensor, and gas valve operation.' , group: 'Repair' },
+              { label: 'Tech support call',      desc: 'Called manufacturer tech support to assist with diagnosis.' , group: 'Repair' },
             ],
             'Exhaust / Ventilation Fan': [
               { label: 'Motor service',        desc: 'Inspected and serviced exhaust fan motor.' , group: 'Maintenance' },
@@ -4185,6 +4242,8 @@
               { label: 'Duct inspection',      desc: 'Inspected ductwork for blockages, leaks, and proper insulation.' , group: 'Maintenance' },
               { label: 'CFM / airflow test',   desc: 'Measured airflow output and verified proper CFM per design specifications.' , group: 'Maintenance' },
               { label: 'Bearing lubrication',  desc: 'Lubricated fan shaft bearings to reduce wear.' , group: 'Maintenance' },
+              { label: 'Motor replacement',    desc: 'Replaced failed exhaust fan motor and verified proper airflow.' , group: 'Repair' },
+              { label: 'Belt replacement',     desc: 'Replaced worn or broken fan belt and re-tensioned drive.' , group: 'Repair' },
             ],
             'Ductwork': [
               { label: 'Leak testing',            desc: 'Pressure tested ductwork and sealed identified air leaks.' , group: 'Maintenance' },
@@ -4193,6 +4252,9 @@
               { label: 'Duct cleaning',           desc: 'Cleaned ductwork to remove dust, debris, and buildup.' , group: 'Maintenance' },
               { label: 'Air balancing',           desc: 'Adjusted registers and dampers to balance airflow throughout the system.' , group: 'Maintenance' },
               { label: 'Register / grille cleaning', desc: 'Cleaned all supply and return registers and grilles.' , group: 'Maintenance' },
+              { label: 'New duct run',            desc: 'Fabricated and installed new supply or return ductwork run using sheet metal, S cleat, and drive cleats.' , group: 'Install' },
+              { label: 'Transition & register install', desc: 'Installed plenum transitions and new supply registers/grilles.' , group: 'Install' },
+              { label: 'Duct sealing',            desc: 'Sealed all new duct joints and seams with aluminum tape to prevent air loss.' , group: 'Install' },
             ],
             'Pool Heater': [
               { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup.' , group: 'Maintenance' },
@@ -4205,6 +4267,18 @@
               { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' , group: 'Maintenance' },
               { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly, thermocouple, and gas valve.' , group: 'Maintenance' },
               { label: 'Install Vent Kit',       desc: 'Installed vent kit and verified proper ventilation.' , group: 'Install' },
+              { label: 'Gas hookup',             desc: 'Hooked up gas line to pool heater and leak tested all connections.' , group: 'Install' },
+              { label: 'Venting install',        desc: 'Installed venting (B-vent or direct vent) for new pool heater installation.' , group: 'Install' },
+              { label: 'Electrical hookup',      desc: 'Wired unit power supply, including 120V molex connector conversion where required.' , group: 'Install' },
+              { label: 'Startup & commissioning', desc: 'Performed startup, set manifold pressure to manufacturer-recommended setting, and verified proper operation.' , group: 'Install' },
+              { label: 'Gas valve replacement',  desc: 'Replaced gas valve after confirming unit would not fire despite correct inlet pressure.' , group: 'Repair' },
+              { label: 'Ignition control board replacement', desc: 'Replaced ignition control board after confirming no response on call for heat.' , group: 'Repair' },
+              { label: 'HSI / igniter replacement', desc: 'Replaced hot surface igniter (HSI) after confirming high resistance or no glow on ohm test.' , group: 'Repair' },
+              { label: 'Display board replacement', desc: 'Replaced faulty display board after confirming unintelligible or frozen readout.' , group: 'Repair' },
+              { label: 'Flame sensor replacement', desc: 'Cleaned or replaced corroded flame sense rod after confirming unit shutting down shortly after ignition.' , group: 'Repair' },
+              { label: 'Limit / flow switch test', desc: 'Tested and replaced high-limit or low-water flow switch after confirming nuisance lockout.' , group: 'Repair' },
+              { label: 'Fuse replacement',       desc: 'Replaced blown control fuse and verified cause before returning unit to service.' , group: 'Repair' },
+              { label: 'Bypass valve correction', desc: 'Adjusted or corrected open bypass valve causing recirculation and kettling noise.' , group: 'Repair' },
               { label: 'Call tech support',      desc: 'Called tech support to assist with diagnostic.' , group: 'Misc' },
             ],
             'Compressor Replacement': [
@@ -4255,6 +4329,14 @@
               { label: 'Condenser fan motor replacement', desc: 'Replaced faulty condenser fan motor to restore proper cooling performance.' , group: 'Repair' },
               { label: 'Install 3 in 1',           desc: 'Installed 3 in 1 Start components to replace failed start capacitor, relay, and overload on compressor.' , group: 'Repair' },
               { label: 'Install defrost timer',       desc: 'Installed new defrost timer and verified proper defrost cycles.' , group: 'Repair' },
+              { label: 'Heat trace replacement',   desc: 'Replaced damaged drain line heat trace and verified proper operation to prevent freeze-up.' , group: 'Repair' },
+              { label: 'Drain line coupling repair', desc: 'Repaired leaking drain line by re-sweating coupling and blowing out line with nitrogen.' , group: 'Repair' },
+              { label: 'Defrost termination switch replacement', desc: 'Replaced defrost termination switch after confirming fans not restarting following defrost cycle.' , group: 'Repair' },
+              { label: 'Door latch service',       desc: 'Reset or replaced door latch mechanism to restore proper door seal.' , group: 'Repair' },
+              { label: 'Headmaster valve install', desc: 'Installed headmaster valve and recovered refrigerant from system using certified recovery equipment.' , group: 'Install' },
+              { label: 'Braze under nitrogen',     desc: 'Brazed refrigerant connections with nitrogen purge to prevent internal oxidation.' , group: 'Install' },
+              { label: 'Pressure test & evacuate', desc: 'Pressurized system with dry nitrogen, soaped all connections, and evacuated to 500 microns to confirm no moisture or leaks.' , group: 'Install' },
+              { label: 'Recharge & startup',       desc: 'Recharged system to manufacturer-specified operating pressures and verified charge by superheat/subcooling.' , group: 'Install' },
             ],
             'Walk-in Freezer': [
               { label: 'Door gasket check',        desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' , group: 'Maintenance' },
@@ -4273,6 +4355,15 @@
               { label: 'Compressor check',         desc: 'Checked compressor operation and verified proper pressures and temperatures.' , group: 'Maintenance' },
               { label: 'Install 3 in 1',           desc: 'Installed 3 in 1 Start components to replace failed start capacitor, relay, and overload on compressor.' , group: 'Repair' },
               { label: 'Install defrost timer',       desc: 'Installed new defrost timer and verified proper defrost cycles.' , group: 'Repair' },
+              { label: 'Heat trace replacement',   desc: 'Replaced damaged drain line heat trace and verified proper operation to prevent freeze-up.' , group: 'Repair' },
+              { label: 'Drain line coupling repair', desc: 'Repaired leaking drain line by re-sweating coupling and blowing out line with nitrogen.' , group: 'Repair' },
+              { label: 'Defrost termination switch replacement', desc: 'Replaced defrost termination switch after confirming fans not restarting following defrost cycle.' , group: 'Repair' },
+              { label: 'Suction line ice removal', desc: 'Defrosted ice buildup from suction line and inspected for cause of icing.' , group: 'Repair' },
+              { label: 'Door latch service',       desc: 'Reset or replaced door latch mechanism to restore proper door seal.' , group: 'Repair' },
+              { label: 'Headmaster valve install', desc: 'Installed headmaster valve and recovered refrigerant from system using certified recovery equipment.' , group: 'Install' },
+              { label: 'Braze under nitrogen',     desc: 'Brazed refrigerant connections with nitrogen purge to prevent internal oxidation.' , group: 'Install' },
+              { label: 'Pressure test & evacuate', desc: 'Pressurized system with dry nitrogen, soaped all connections, and evacuated to 500 microns to confirm no moisture or leaks.' , group: 'Install' },
+              { label: 'Recharge & startup',       desc: 'Recharged system to manufacturer-specified operating pressures and verified charge by superheat/subcooling.' , group: 'Install' },
 
             ],
             'Reach-in Cooler': [
@@ -4287,6 +4378,13 @@
               { label: 'Light replacement',        desc: 'Replaced interior light bulb and verified proper operation.', group: 'Repair' },
               { label: 'ice buildup removal',      desc: 'Removed ice buildup from evaporator coil and interior surfaces to restore proper airflow and cooling.' , group: 'Repair' },
               { label: 'Install 3 in 1',           desc: 'Installed 3 in 1 Start components to replace failed start capacitor, relay, and overload on compressor.' , group: 'Repair' },
+              { label: 'Door gasket reforming',    desc: 'Heated deformed door gasket with heat gun to make pliable and reform proper seal.' , group: 'Repair' },
+              { label: 'Refrigerant recovery',     desc: 'Recovered refrigerant from system using certified recovery equipment in preparation for compressor change-out.' , group: 'Install' },
+              { label: 'Compressor removal',       desc: 'Removed electrical and case coil heater, then un-sweat and removed failed compressor.' , group: 'Install' },
+              { label: 'Oil contamination check',  desc: 'Inspected compressor oil for acid contamination and flushed system as needed before installing new compressor.' , group: 'Install' },
+              { label: 'Compressor install & braze', desc: 'Installed new compressor and filter drier, brazed connections under nitrogen purge.' , group: 'Install' },
+              { label: 'Evacuate & recharge',      desc: 'Evacuated system to 500 microns and recharged to manufacturer specification.' , group: 'Install' },
+              { label: 'Startup & verify',         desc: 'Started system and verified proper pressures, temperatures, and operation.' , group: 'Install' },
             ],
             'Reach-in Freezer': [
               { label: 'Door gasket check',       desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' , group: 'Maintenance' },
@@ -4299,6 +4397,14 @@
               { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' , group: 'Maintenance' },
               { label: 'ice buildup removal',      desc: 'Removed ice buildup from evaporator coil and interior surfaces to restore proper airflow and cooling.' , group: 'Repair' },
               { label: 'Install 3 in 1',           desc: 'Installed 3 in 1 Start components to replace failed start capacitor, relay, and overload on compressor.' , group: 'Repair' },
+              { label: 'Door gasket reforming',    desc: 'Heated deformed door gasket with heat gun to make pliable and reform proper seal.' , group: 'Repair' },
+              { label: 'Evaporator disassembly',   desc: 'Disassembled evaporator shroud and removed heater elements in preparation for service.' , group: 'Install' },
+              { label: 'R290 refrigerant flush',   desc: 'Safely vented R290 refrigerant, cut out discharge line port, and nitrogen flushed system.' , group: 'Install' },
+              { label: 'Un-sweat components',      desc: 'Un-sweat evaporator and compressor/filter drier from system piping.' , group: 'Install' },
+              { label: 'Compressor install & braze', desc: 'Prepped and brazed in new compressor and filter drier under nitrogen purge.' , group: 'Install' },
+              { label: 'Braze evaporator',         desc: 'Brazed evaporator back into system under nitrogen purge.' , group: 'Install' },
+              { label: 'Pressure test',            desc: 'Pressure tested to recommended pressure and soaped all joints for leaks.' , group: 'Install' },
+              { label: 'Evaporator reassembly',    desc: 'Reassembled evaporator shroud and heater elements.' , group: 'Install' },
             ],
             'Ice Machine': [
               { label: 'Cleaning & sanitizing',       desc: 'Performed full cleaning and sanitizing cycle per manufacturer procedure.' , group: 'Maintenance' },
@@ -4309,6 +4415,11 @@
               { label: 'Bin thermostat check',        desc: 'Tested bin thermostat and verified proper shutoff when bin is full.' , group: 'Maintenance' },
               { label: 'Water inlet valve check',     desc: 'Inspected and tested water inlet valve for proper operation and flow.' , group: 'Maintenance' },
               { label: 'Float valve check',           desc: 'Inspected float valve and verified proper water level control.' , group: 'Maintenance' },
+              { label: 'Float valve replacement',     desc: 'Replaced float valve after confirming improper water level control causing unit to never enter freeze cycle.' , group: 'Repair' },
+              { label: 'Control board repair',        desc: 'Repaired cracked solder joint on control board causing intermittent switch failure.' , group: 'Repair' },
+              { label: 'Drain fitting replacement',   desc: 'Removed top and ice basin, replaced cracked or leaking drain fitting, and reassembled.' , group: 'Repair' },
+              { label: 'Sump leak repair',            desc: 'Tightened or replaced sump hose clamp after confirming slow water leak.' , group: 'Repair' },
+              { label: 'Water inlet valve replacement', desc: 'Replaced water inlet valve after confirming continuous fill or leak.' , group: 'Repair' },
             ],
             'Commercial Fryer': [
               { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup.' , group: 'Maintenance' },
@@ -4319,6 +4430,8 @@
               { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly, thermocouple, and gas valve.' , group: 'Maintenance' },
               { label: 'Oil drain service',      desc: 'Drained and cleaned fryer oil reservoir.' , group: 'Maintenance' },
               { label: 'Ignitor test',           desc: 'Tested ignitor and verified proper ignition sequence.' , group: 'Maintenance' },
+              { label: 'High limit switch replacement', desc: 'Replaced high-limit safety switch after confirming incorrect cutoff temperature.' , group: 'Repair' },
+              { label: 'Gas valve replacement',  desc: 'Replaced gas valve after confirming improper inlet or outlet pressure.' , group: 'Repair' },
             ],
             'Deep Fryer': [
               { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup.' , group: 'Maintenance' },
@@ -4329,6 +4442,8 @@
               { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' , group: 'Maintenance' },
               { label: 'Ignitor test',           desc: 'Tested ignitor and verified proper ignition sequence.' , group: 'Maintenance' },
               { label: 'Oil drain service',      desc: 'Drained and cleaned fryer oil reservoir.' , group: 'Maintenance' },
+              { label: 'Drain valve replacement', desc: 'Replaced leaking or stuck oil drain valve.' , group: 'Repair' },
+              { label: 'High limit switch replacement', desc: 'Replaced high-limit safety switch after confirming incorrect cutoff temperature.' , group: 'Repair' },
             ],
             'Commercial Dishwasher': [
               { label: 'Spray arm cleaning',       desc: 'Removed and cleaned spray arms and cleared all nozzle openings.' , group: 'Maintenance' },
@@ -4339,6 +4454,8 @@
               { label: 'Heating element check',    desc: 'Tested heating elements and verified proper booster temperature.' , group: 'Maintenance' },
               { label: 'Wash pump service',        desc: 'Inspected and serviced wash pump motor and impeller.' , group: 'Maintenance' },
               { label: 'Rinse aid check',          desc: 'Checked rinse aid concentration and refilled dispenser.' , group: 'Maintenance' },
+              { label: 'Wash pump replacement',    desc: 'Replaced worn wash pump motor or impeller after confirming poor wash performance.' , group: 'Repair' },
+              { label: 'Heating element replacement', desc: 'Replaced failed heating element after confirming booster temperature not reaching code minimum.' , group: 'Repair' },
             ],
             'Hood & Exhaust': [
               { label: 'Grease filter cleaning', desc: 'Removed and cleaned grease filters to restore airflow and reduce fire hazard.' , group: 'Maintenance' },
@@ -4348,6 +4465,8 @@
               { label: 'Duct cleaning',          desc: 'Cleaned exhaust duct to remove grease buildup and reduce fire hazard.' , group: 'Maintenance' },
               { label: 'Fire suppression check', desc: 'Inspected fire suppression system nozzles and fusible links.' , group: 'Maintenance' },
               { label: 'Grease trap cleaning',   desc: 'Cleaned grease trap to restore proper flow and prevent overflow.' , group: 'Maintenance' },
+              { label: 'Exhaust fan motor replacement', desc: 'Replaced failed exhaust fan motor.' , group: 'Repair' },
+              { label: 'Fire suppression nozzle service', desc: 'Replaced corroded or blocked fire suppression nozzle or fusible link.' , group: 'Repair' },
             ],
             'Panini Grill': [
               { label: 'Element check',          desc: 'Inspected heating elements for proper function and even heat distribution.' , group: 'Maintenance' },
@@ -4356,6 +4475,8 @@
               { label: 'Hinge inspection',       desc: 'Inspected and adjusted upper plate hinge mechanism.' , group: 'Maintenance' },
               { label: 'Temperature calibration',desc: 'Calibrated thermostat to specified operating temperature.' , group: 'Maintenance' },
               { label: 'Power cord check',       desc: 'Inspected power cord and connections for wear and proper grounding.' , group: 'Maintenance' },
+              { label: 'Element replacement',    desc: 'Replaced failed heating element after confirming uneven or no heat.' , group: 'Repair' },
+              { label: 'Thermostat replacement', desc: 'Replaced faulty thermostat after confirming inaccurate plate temperature.' , group: 'Repair' },
             ],
             'Refrigerated Prep Table': [
               { label: 'Coil cleaning',          desc: 'Cleaned evaporator coil to restore unit efficiency.' , group: 'Maintenance' },
@@ -4364,6 +4485,8 @@
               { label: 'Fan motor service',      desc: 'Inspected evaporator fan motor and verified proper operation.' , group: 'Maintenance' },
               { label: 'Refrigerant check',      desc: 'Checked refrigerant pressures and verified system operating within specifications.' , group: 'Maintenance' },
               { label: 'Cutting board inspection',desc: 'Inspected cutting board surface for cracks and excessive wear.' , group: 'Maintenance' },
+              { label: 'Fan motor replacement',  desc: 'Replaced failed evaporator fan motor.' , group: 'Repair' },
+              { label: 'Compressor replacement', desc: 'Diagnosed and replaced failed compressor after confirming unit not maintaining temperature.' , group: 'Repair' },
             ],
             'Convection Oven': [
               { label: 'Element inspection',     desc: 'Inspected heating elements for continuity and even heat distribution.' , group: 'Maintenance' },
@@ -4372,6 +4495,8 @@
               { label: 'Fan motor service',      desc: 'Inspected and serviced convection fan motor.' , group: 'Maintenance' },
               { label: 'Interior cleaning',      desc: 'Cleaned oven interior, removing carbon buildup and grease.' , group: 'Maintenance' },
               { label: 'Temperature verification',desc: 'Verified oven temperature accuracy using calibrated thermometer.' , group: 'Maintenance' },
+              { label: 'Element replacement',    desc: 'Replaced failed heating element after confirming uneven cooking temperature.' , group: 'Repair' },
+              { label: 'Fan motor replacement',  desc: 'Replaced failed convection fan motor.' , group: 'Repair' },
             ],
             'Steam Table': [
               { label: 'Heating element check', desc: 'Inspected heating elements for proper function and even heat distribution.' , group: 'Maintenance' },
@@ -4379,6 +4504,8 @@
               { label: 'Water level check',      desc: 'Inspected water level control and float switch for proper operation.' , group: 'Maintenance' },
               { label: 'Pan seal inspection',    desc: 'Inspected pan wells for cracks and proper sealing.' , group: 'Maintenance' },
               { label: 'Temperature calibration',desc: 'Calibrated thermostat to specified operating temperature.' , group: 'Maintenance' },
+              { label: 'Heating element replacement', desc: 'Replaced failed heating element after confirming water not reaching temperature.' , group: 'Repair' },
+              { label: 'Float switch replacement', desc: 'Replaced faulty float switch causing improper water level control.' , group: 'Repair' },
             ],
             'Range Oven': [
               { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup on all top burners and oven burner.' , group: 'Maintenance' },
@@ -4389,6 +4516,10 @@
               { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly and thermocouple.' , group: 'Maintenance' },
               { label: 'Interior cleaning',      desc: 'Cleaned oven interior, burner grates, drip pans, and removed carbon buildup.' , group: 'Maintenance' },
               { label: 'Broiler test',           desc: 'Tested broiler operation and verified proper flame pattern and temperature.' , group: 'Maintenance' },
+              { label: 'Regulator replacement',  desc: 'Replaced gas pressure regulator after confirming low manifold pressure with all burners running.' , group: 'Repair' },
+              { label: 'Burner replacement',     desc: 'Replaced damaged or corroded burner after confirming poor flame pattern could not be corrected by cleaning.' , group: 'Repair' },
+              { label: 'Ignitor replacement',    desc: 'Replaced failed ignitor or spark module after confirming unreliable ignition.' , group: 'Repair' },
+              { label: 'No-ignition diagnostic', desc: 'Diagnosed no-ignition complaint by checking gas valve, ignitor, and safety circuit.' , group: 'Repair' },
             ],
             'Flat Top Griddle': [
               { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern, even heat distribution, and carbon buildup.' , group: 'Maintenance' },
@@ -4399,6 +4530,8 @@
               { label: 'Grease trough service',  desc: 'Cleaned grease troughs, drain, and grease drawer.' , group: 'Maintenance' },
               { label: 'Surface re-seasoning',   desc: 'Cleaned and re-seasoned griddle cooking surface.' , group: 'Maintenance' },
               { label: 'Element check (electric)',desc: 'Inspected heating elements for continuity and even heat distribution (electric model).' , group: 'Maintenance' },
+              { label: 'Burner / pilot replacement', desc: 'Replaced damaged burner or pilot assembly after confirming uneven heat distribution.' , group: 'Repair' },
+              { label: 'Element replacement (electric)', desc: 'Replaced failed heating element on electric griddle.' , group: 'Repair' },
             ],
             'Commercial Refrigeration': [
               { label: 'Refrigerant check',        desc: 'Checked refrigerant pressures and temperatures, verified system operating within specifications.' , group: 'Maintenance' },
@@ -4411,6 +4544,8 @@
               { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' , group: 'Maintenance' },
               { label: 'Door heater check',        desc: 'Tested door frame heater to prevent ice buildup and ensure proper sealing.' , group: 'Maintenance' },
               { label: 'Leak detection',           desc: 'Performed leak search on all refrigerant connections and components.' , group: 'Maintenance' },
+              { label: 'Compressor replacement',   desc: 'Replaced failed compressor after confirming open or shorted windings.' , group: 'Repair' },
+              { label: 'Fan motor replacement',    desc: 'Replaced failed evaporator or condenser fan motor.' , group: 'Repair' },
             ],
             'Sandwich / Prep Station': [
               { label: 'Door gasket check',       desc: 'Inspected door and pan cover gaskets for proper sealing.' , group: 'Maintenance' },
@@ -4420,6 +4555,8 @@
               { label: 'Refrigerant check',       desc: 'Checked refrigerant pressures and verified system operating within specifications.' , group: 'Maintenance' },
               { label: 'Cutting board inspection',desc: 'Inspected cutting board surface for cracks and excessive wear.' , group: 'Maintenance' },
               { label: 'Rail & pan check',        desc: 'Inspected top rail, pan holders, and inserts for proper fit and sealing.' , group: 'Maintenance' },
+              { label: 'Door gasket replacement', desc: 'Replaced worn door or pan cover gaskets to restore proper sealing.' , group: 'Repair' },
+              { label: 'Fan motor replacement',   desc: 'Replaced failed evaporator fan motor.' , group: 'Repair' },
             ],
             'Compressor Replacement': [
               { label: 'Refrigerant recovery',    desc: 'Recovered refrigerant from system using certified recovery equipment.' , group: 'Repair' },
@@ -4448,6 +4585,16 @@
               { label: 'R290 recharge',           desc: 'Recharged system with R290 by weight to manufacturer specification. Verified operating pressures and temperatures within range.' , group: 'Install' },
               { label: 'Saddle valve removal',    desc: 'Removed temporary saddle valves and brazed line penetrations closed under nitrogen purge. Leak checked all repairs.' , group: 'Install' },
               { label: 'Startup & verify',        desc: 'Performed startup, verified suction/discharge pressures, superheat, subcooling, and confirmed unit pulling down to temperature.' , group: 'Install' },
+              { label: 'Crimp valve',             desc: 'Crimped off temporary access valves once service was complete and leak checked crimps.' , group: 'Install' },
+            ],
+            'Small Appliance / Other Equipment': [
+              { label: 'Diagnostic visit',        desc: 'Diagnosed customer-reported issue on small kitchen appliance; identified root cause and discussed repair options.' , group: 'Maintenance' },
+              { label: 'Disassembly & inspection', desc: 'Disassembled unit and inspected mechanical and electrical components for failure.' , group: 'Repair' },
+              { label: 'Motor / drive repair',    desc: 'Inspected and repaired or replaced drive motor, belt, or gearbox as needed.' , group: 'Repair' },
+              { label: 'Electrical / board test', desc: 'Tested wiring, switches, and control board for continuity and proper operation.' , group: 'Repair' },
+              { label: 'Component replacement',   desc: 'Replaced failed component, reassembled unit, and tested for proper operation.' , group: 'Repair' },
+              { label: 'Face plate / panel replacement', desc: 'Replaced damaged face plate or control panel and reinstalled associated hardware.' , group: 'Repair' },
+              { label: 'Part sourcing',           desc: 'Identified part number and sourced replacement component from distributor.' , group: 'Misc' },
             ],
           }
         }
@@ -6730,7 +6877,20 @@
         }
       };
 
-      document.getElementById('addItem').onclick = () => { const row = createItemRow({ markup: getDefaultMarkupPercent() }); const desc = row.querySelector('.item-desc'); if (desc) { desc.focus({ preventScroll: true }); desc.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } };
+      document.getElementById('addItem').onclick = () => {
+        const row = createItemRow({ markup: getDefaultMarkupPercent() });
+        const desc = row.querySelector('.item-desc');
+        if (!desc) return;
+        desc.focus({ preventScroll: true });
+        const doScroll = () => desc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (window.visualViewport) {
+          const onResize = () => { window.visualViewport.removeEventListener('resize', onResize); doScroll(); };
+          window.visualViewport.addEventListener('resize', onResize);
+          setTimeout(() => { window.visualViewport.removeEventListener('resize', onResize); doScroll(); }, 400);
+        } else {
+          setTimeout(doScroll, 300);
+        }
+      };
       document.getElementById('manageSavedMaterials').onclick = () => openSavedMaterialsModal();
 
       // Service charge default — load saved value and wire apply button
