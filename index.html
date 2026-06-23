@@ -286,7 +286,6 @@
         input,select,textarea {font-size:16px;}
         .invoice-grid {grid-template-columns:1fr;}
         #invoiceSummary .summary-grid {grid-template-columns:1fr;gap:0.5rem;}
-        .bi-calc-toolbar {grid-template-columns:1fr;}
         table {font-size:0.9rem;margin:0.75rem 0;}
         th,td {padding:0.4rem;}
         .history-btn {width:40px;height:40px;right:8px;}
@@ -650,19 +649,6 @@
         .qty-step-btn { width:40px; min-height:44px; font-size:1.3rem; }
       }
 
-      /* ── Black Iron calculator */
-      .bi-calc-toolbar {display:grid;grid-template-columns:1fr;gap:.75rem;align-items:end;}
-      .bi-calc-list {list-style:none;padding:0;margin:1rem 0 0 0;display:grid;gap:.65rem;}
-      .bi-calc-list li {background:#242424;border:1px solid rgba(255,69,0,.28);border-radius:10px;padding:.85rem;}
-      .bi-calc-sub {margin-left:1rem;margin-top:.45rem;}
-      .bi-calc-results {margin-top:1rem;padding:1rem;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,69,0,.25);}
-      .bi-calc-results h3 {margin:.1rem 0 .6rem 0;color:#ffb184;}
-      .bi-calc-results p {margin:.35rem 0;}
-      .bi-calc-error {color:#ff9f9f;}
-      #biCanvasContainer {width:100%;overflow:hidden;position:relative;margin-top:1rem;}
-      #biPipeCanvas {width:100%;max-width:100%;border:1px solid rgba(255,69,0,.35);border-radius:10px;background:#fff;cursor:grab;}
-      #biPipeCanvas.dragging {cursor:grabbing;}
-
       /* Black Iron tab */
       #blackIronTab .bi-wrap {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:0 0 1.5rem 0;}
 
@@ -888,6 +874,92 @@
         border-color: rgba(111,66,193,.55) !important;
         box-shadow: inset 0 0 0 1px rgba(111,66,193,.4);
       }
+
+      /* ── Inventory tab ── */
+      #inventorySummary .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .6rem;
+        margin-bottom: 1rem;
+      }
+      #inventorySummary .summary-item {
+        background: rgba(255,255,255,.03);
+        border: 1px solid rgba(255,69,0,.2);
+        border-radius: 10px;
+        padding: .65rem .85rem;
+        font-size: .88rem;
+      }
+      #inventorySummary .summary-item b {
+        display: block;
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .07em;
+        color: #ff6a30;
+        margin-bottom: .2rem;
+        font-weight: 700;
+      }
+      #inventorySummary .summary-item span {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #e0e0e0;
+      }
+      @media (max-width: 600px) {
+        #inventorySummary .summary-grid { grid-template-columns: 1fr 1fr; }
+      }
+      @media (max-width: 380px) {
+        #inventorySummary .summary-grid { grid-template-columns: 1fr; }
+      }
+      .inv-row-low {
+        border-color: rgba(255,60,60,.6) !important;
+        background: rgba(120,20,20,.14) !important;
+      }
+      .inv-qty-stepper { flex-shrink: 0; align-self: center; }
+      .inv-qty-stepper .inv-qty-input {
+        text-align: center;
+        border-radius: 0 !important;
+        flex: 1;
+        min-width: 46px;
+        padding: .4rem .25rem !important;
+        background: #1e1e1e;
+        border: 1px solid rgba(255,69,0,.45);
+        color: #e0e0e0;
+        font-size: .95rem;
+        min-height: 38px;
+        margin: 0;
+        box-sizing: border-box;
+      }
+      .inv-min-input {
+        width: 50px;
+        padding: .25rem .3rem;
+        background: #1e1e1e;
+        border: 1px solid rgba(255,69,0,.35);
+        border-radius: 6px;
+        color: #e0e0e0;
+        font-size: .82rem;
+        min-height: auto;
+        margin: 0;
+        box-sizing: border-box;
+      }
+      #lowStockBanner {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 600;
+        background: #7a1414;
+        color: #fff;
+        padding: .65rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .75rem;
+        flex-wrap: wrap;
+        font-size: .9rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,.4);
+        transform: translateY(-110%);
+        transition: transform .3s ease;
+      }
+      #lowStockBanner.show { transform: translateY(0); }
+      #lowStockBanner b { color: #ffb0b0; }
+      #lowStockBanner button { margin: 0; padding: .35rem .8rem; font-size: .85rem; min-height: 34px; }
 
       /* ── Input clear (×) buttons ── */
       .input-clr-btn {
@@ -1467,8 +1539,8 @@
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
       <button type="button" class="tab-btn" data-tab="invoiceTab"><i class="fas fa-file-invoice-dollar"></i> Invoice</button>
-      <button type="button" class="tab-btn" data-tab="blackIronCalcTab"><i class="fas fa-calculator"></i> Pipe Calculator</button>
       <button type="button" class="tab-btn" data-tab="blackIronTab"><i class="fas fa-wrench"></i> Black Iron</button>
+      <button type="button" class="tab-btn" data-tab="inventoryTab"><i class="fas fa-boxes-stacked"></i> Inventory</button>
     </div>
 
     <div id="timesheetTab" class="tab-panel active">
@@ -1970,6 +2042,9 @@
               <label class="sml-edit-full"><span>Description</span>
                 <input type="text" id="newMatDesc" placeholder="e.g. 1/2&quot; Ball Valve">
               </label>
+              <label class="sml-edit-full"><span>Supplier Link (optional)</span>
+                <input type="url" id="newMatLink" placeholder="Paste Wolseley Express product link" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
+              </label>
               <label><span>Unit</span>
                 <input type="text" id="newMatUnit" placeholder="ea">
               </label>
@@ -2132,70 +2207,6 @@
           </h4>
           <div id="locationProfilesList" class="profile-list"></div>
         </div>
-      </div>
-    </div>
-
-    <div id="blackIronCalcTab" class="tab-panel">
-  <div class="bi-wrap">
-        <h2>Black Iron Length Calculator</h2>
-        <div class="bi-calc-toolbar">
-          <label>Pipe Size:
-            <select id="biCalcPipeSize">
-              <option value="0.5">1/2"</option>
-              <option value="0.75">3/4"</option>
-              <option value="1">1"</option>
-              <option value="1.25">1-1/4"</option>
-            </select>
-          </label>
-          <label>Assembled Length (in):
-            <input type="number" id="biCalcMeasurement" step="0.01" min="0" class="select-on-focus">
-          </label>
-          <label>Starting Fitting:
-            <select id="biCalcStartFitting">
-              <option value="none">None</option>
-              <option value="elbow">90° Elbow</option>
-              <option value="tee">Tee</option>
-              <option value="coupling">Coupling</option>
-              <option value="shutoff">Shut-Off Valve</option>
-            </select>
-          </label>
-          <label>Ending Fitting:
-            <select id="biCalcEndFitting">
-              <option value="none">None</option>
-              <option value="elbow">90° Elbow</option>
-              <option value="tee">Tee</option>
-              <option value="coupling">Coupling</option>
-              <option value="shutoff">Shut-Off Valve</option>
-            </select>
-          </label>
-          <label>Mid-Segment Shut-Off (in):
-            <input type="number" id="biCalcShutoffPosition" step="0.01" min="0" placeholder="Optional" class="select-on-focus">
-          </label>
-          <label style="display:flex;align-items:center;gap:.6rem;margin-top:1.6rem;">
-            <input type="checkbox" id="biCalcAutoTransfer" checked style="width:auto;">
-            Auto-add fittings to parts list
-          </label>
-        </div>
-        <div class="bi-actions">
-          <button type="button" id="biCalcAddLength">Add Length</button>
-          <button type="button" id="biCalcTotal">Calculate Total</button>
-          <button type="button" id="biSendToParts" style="background:#28a745;">Send to Black Iron</button>
-          <button type="button" id="biCalcReset" style="background:#6c757d;">Reset</button>
-        </div>
-        <small class="bi-muted">Uses fitting takeout/engagement to suggest the closest nipple sizes, and can push those fittings straight into your Black Iron parts list.</small>
-
-        <ul id="biCalcLengthList" class="bi-calc-list"></ul>
-
-        <div id="biCanvasContainer">
-          <canvas id="biPipeCanvas" width="900" height="320"></canvas>
-          <div class="bi-actions" style="margin-top:.75rem;">
-            <button type="button" id="biCanvasZoomIn">Zoom In</button>
-            <button type="button" id="biCanvasZoomOut">Zoom Out</button>
-            <button type="button" id="biCanvasResetView" style="background:#6c757d;">Reset View</button>
-          </div>
-        </div>
-
-        <div id="biCalcResults" class="bi-calc-results"></div>
       </div>
     </div>
 
@@ -2377,6 +2388,68 @@
         </div><!-- /biPartsListBody -->
       </div>
     </div><!-- /blackIronTab -->
+
+    <div id="inventoryTab" class="tab-panel">
+      <div id="inventorySummary">
+        <div class="summary-grid">
+          <div class="summary-item"><b>Parts Tracked</b> <span id="invStatCount">0</span></div>
+          <div class="summary-item"><b>Low Stock</b> <span id="invStatLow">0</span></div>
+          <div class="summary-item"><b>Stock Value</b> <span id="invStatValue">$0.00</span></div>
+        </div>
+      </div>
+
+      <h2>Truck Inventory</h2>
+      <small class="muted-note" style="margin-top:-.5rem;margin-bottom:.85rem;display:block;">
+        Stock updates automatically as parts are added to invoices. Use the +/− or tap the number to correct counts after a job or a restock.
+      </small>
+
+      <div class="inline-group" style="margin-bottom:.75rem;">
+        <button type="button" id="toggleAddInventoryForm" class="mini-btn" style="background:#ff4500;">＋ Add New Part</button>
+        <button type="button" id="openSavedMaterialsFromInventory" class="mini-btn" style="background:#0d6efd;">💲 Edit Pricing</button>
+      </div>
+
+      <!-- Add new inventory item form (hidden until toggled) -->
+      <div id="addInventoryForm" style="display:none;background:#2b2b2b;border:1px solid rgba(255,69,0,.25);border-radius:10px;padding:.85rem;margin-bottom:1rem;">
+        <div style="font-size:.8rem;font-weight:700;color:#ff9060;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.6rem;">New Part</div>
+        <div class="sml-edit-grid">
+          <label class="sml-edit-full"><span>Description</span>
+            <input type="text" id="newInvDesc" placeholder="e.g. 3/4&quot; Copper Tee">
+          </label>
+          <label><span>Unit</span>
+            <input type="text" id="newInvUnit" placeholder="ea">
+          </label>
+          <label><span>Qty On Hand</span>
+            <input type="number" id="newInvQty" min="0" step="1" placeholder="0">
+          </label>
+          <label><span>Alert Below</span>
+            <input type="number" id="newInvMin" min="0" step="1" placeholder="0">
+          </label>
+        </div>
+        <div class="sml-edit-actions">
+          <button type="button" id="saveNewInventoryItem" class="mini-btn" style="background:#ff4500;">Save Part</button>
+          <button type="button" id="cancelNewInventoryItem" class="mini-btn" style="background:#555;">Cancel</button>
+        </div>
+      </div>
+
+      <input type="text" id="invSearch" class="saved-materials-search" placeholder="Search inventory">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:.4rem;margin:0;font-size:.88rem;white-space:nowrap;">
+          Sort by:
+          <select id="invSort" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.35rem .5rem;font-size:.88rem;min-height:36px;margin:0;">
+            <option value="qty-asc">Qty: Low → High</option>
+            <option value="qty-desc">Qty: High → Low</option>
+            <option value="name-asc">Name A → Z</option>
+            <option value="name-desc">Name Z → A</option>
+          </select>
+        </label>
+        <label style="display:flex;align-items:center;gap:.4rem;margin:0;font-size:.85rem;cursor:pointer;">
+          <input type="checkbox" id="invLowStockOnly" style="width:auto;min-height:auto;margin:0;accent-color:#ff4500;">
+          Low stock only
+        </label>
+      </div>
+
+      <div id="inventoryList" class="saved-materials-list"></div>
+    </div><!-- /inventoryTab -->
 
 
     <div id="loading"><div class="spinner"></div><br>Generating...</div>
@@ -2654,6 +2727,24 @@
       let invoices = JSON.parse(_ls.getItem('savedInvoices') || '{}');
       let materialCatalog = JSON.parse(_ls.getItem('materialCatalog') || '{}');
 
+      // ── Truck inventory: auto-deduct ledger ──
+      // Tracks how much of each material has been pulled from stock for the
+      // invoice currently open in the form, keyed by that invoice's stable uuid
+      // (not the editable Invoice ID text). This lets edits/removals net out
+      // correctly and prevents double-deducting when a draft is reopened.
+      let inventoryLedgers = JSON.parse(_ls.getItem('inventoryLedgers') || '{}');
+      let currentInvoiceUuid = null;
+      let currentInvoiceInventoryLocked = false;
+
+      function saveInventoryLedgers() {
+        _ls.setItem('inventoryLedgers', JSON.stringify(inventoryLedgers));
+      }
+
+      function ensureCurrentInvoiceUuid() {
+        if (!currentInvoiceUuid) currentInvoiceUuid = generateEntryId();
+        return currentInvoiceUuid;
+      }
+
       function saveMaterialCatalog() {
         _ls.setItem('materialCatalog', JSON.stringify(materialCatalog));
         renderMaterialSuggestions();
@@ -2661,6 +2752,13 @@
 
       function normalizeMaterialKey(desc) {
         return String(desc || '').trim().toLowerCase();
+      }
+
+      function normalizeSupplierUrl(url) {
+        const trimmed = String(url || '').trim();
+        if (!trimmed) return '';
+        if (/^https?:\/\//i.test(trimmed)) return trimmed;
+        return `https://${trimmed}`;
       }
 
       function saveMaterialFromValues(values = {}, markPriceUpdated = false) {
@@ -2676,6 +2774,7 @@
           markup: +values.markup || 0,
           customerPrice: +values.customerPrice || 0,
           category: values.category || existing.category || '',
+          supplierLink: values.supplierLink !== undefined ? values.supplierLink : (existing.supplierLink || ''),
           priceAlertEnabled: existing.priceAlertEnabled !== false, // default true
           priceLastUpdated: markPriceUpdated ? new Date().toISOString() : (existing.priceLastUpdated || null)
         };
@@ -2765,6 +2864,271 @@
         dismiss.onclick = () => banner.classList.remove('show');
       }
 
+      // ════════════════════════════════════════════════════════════════════
+      // ── Inventory (truck stock) ──
+      // ════════════════════════════════════════════════════════════════════
+
+      function checkLowStockAlerts() {
+        const low = Object.values(materialCatalog).filter(item =>
+          item.lowStockAlertEnabled && (item.qty || 0) <= (item.minQty || 0)
+        );
+        const banner = document.getElementById('lowStockBanner');
+        const msg    = document.getElementById('lowStockMsg');
+        const goTo   = document.getElementById('lowStockGoTo');
+        const dismiss= document.getElementById('lowStockDismiss');
+        if (!banner || !msg) return;
+        if (!low.length) { banner.classList.remove('show'); return; }
+
+        const count = low.length;
+        msg.innerHTML = `<b>Low stock:</b> ${count} part${count > 1 ? 's are' : ' is'} at or below the reorder point.`;
+        banner.classList.add('show');
+
+        goTo.onclick = () => {
+          banner.classList.remove('show');
+          setActiveTab('inventoryTab');
+        };
+        dismiss.onclick = () => banner.classList.remove('show');
+      }
+
+      // Which invoice-items-table rows represent real, physical materials
+      // (as opposed to labor or the service-charge line).
+      function isMaterialInvoiceRow(row) {
+        const t = row.dataset.type || '';
+        if (t === 'service-charge') return false;
+        if (t === 'regular-labor' || t === 'overtime-labor') return false;
+        if (t.startsWith('labor-')) return false;
+        return true;
+      }
+
+      function collectCurrentInvoiceMaterialUsage() {
+        const usage = {};
+        document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+          if (!isMaterialInvoiceRow(row)) return;
+          const descEl = row.querySelector('.item-desc');
+          const qtyEl  = row.querySelector('.item-qty');
+          if (!descEl || !qtyEl) return;
+          const key = normalizeMaterialKey(descEl.value);
+          if (!key || !materialCatalog[key]) return;
+          const qty = parseFloat(qtyEl.value) || 0;
+          usage[key] = (usage[key] || 0) + qty;
+        });
+        return usage;
+      }
+
+      // Reconciles truck stock against whatever materials are currently in
+      // the invoice form, applying only the delta since this invoice's last
+      // sync. Safe to call repeatedly (every qty change / row add / remove).
+      function syncInventoryDeduction() {
+        if (currentInvoiceInventoryLocked) return;
+        const uuid = ensureCurrentInvoiceUuid();
+        const usage = collectCurrentInvoiceMaterialUsage();
+        const prevLedger = inventoryLedgers[uuid] || {};
+        const allKeys = new Set([...Object.keys(usage), ...Object.keys(prevLedger)]);
+        let changed = false;
+        const newLedger = {};
+        allKeys.forEach(key => {
+          const newQty = usage[key] || 0;
+          const oldQty = prevLedger[key] || 0;
+          const delta = newQty - oldQty;
+          if (delta !== 0 && materialCatalog[key]) {
+            materialCatalog[key].qty = Math.max(0, (materialCatalog[key].qty || 0) - delta);
+            changed = true;
+          }
+          if (newQty > 0) newLedger[key] = newQty;
+        });
+        inventoryLedgers[uuid] = newLedger;
+        saveInventoryLedgers();
+        if (changed) {
+          saveMaterialCatalog();
+          checkLowStockAlerts();
+          if (document.getElementById('inventoryTab')?.classList.contains('active')) {
+            renderInventoryList(document.getElementById('invSearch')?.value || '');
+          }
+        }
+      }
+
+      // Invoice abandoned/deleted before being finalized — put the stock back.
+      function restoreInventoryForCurrentInvoice() {
+        if (!currentInvoiceUuid) return;
+        const ledger = inventoryLedgers[currentInvoiceUuid];
+        if (ledger) {
+          let changed = false;
+          Object.entries(ledger).forEach(([key, qty]) => {
+            if (materialCatalog[key] && qty) {
+              materialCatalog[key].qty = (materialCatalog[key].qty || 0) + qty;
+              changed = true;
+            }
+          });
+          delete inventoryLedgers[currentInvoiceUuid];
+          saveInventoryLedgers();
+          if (changed) saveMaterialCatalog();
+        }
+      }
+
+      // Invoice PDF generated — the parts are genuinely gone. Stop tracking
+      // deltas for this invoice so reopening it later won't double-deduct.
+      function finalizeInventoryForCurrentInvoice() {
+        if (!currentInvoiceUuid) return;
+        delete inventoryLedgers[currentInvoiceUuid];
+        saveInventoryLedgers();
+        const invoiceId = document.getElementById('invoiceId').value.trim();
+        if (invoiceId && invoices[invoiceId]) {
+          invoices[invoiceId].inventoryFinalized = true;
+          saveInvoicesToStorage();
+        }
+      }
+
+      function getInventoryStats() {
+        const items = Object.values(materialCatalog);
+        const lowCount = items.filter(i => i.lowStockAlertEnabled && (i.qty || 0) <= (i.minQty || 0)).length;
+        const totalValue = items.reduce((sum, i) => sum + ((i.qty || 0) * (i.distributorCost || 0)), 0);
+        return { count: items.length, lowCount, totalValue };
+      }
+
+      function renderInventoryStats() {
+        const stats = getInventoryStats();
+        const elCount = document.getElementById('invStatCount');
+        const elLow   = document.getElementById('invStatLow');
+        const elVal   = document.getElementById('invStatValue');
+        if (elCount) elCount.textContent = stats.count;
+        if (elLow)   elLow.textContent   = stats.lowCount;
+        if (elVal)   elVal.textContent   = '$' + formatMoney(stats.totalValue);
+      }
+
+      function adjustInventoryQty(key, delta) {
+        if (!materialCatalog[key]) return;
+        materialCatalog[key].qty = Math.max(0, (materialCatalog[key].qty || 0) + delta);
+        saveMaterialCatalog();
+        checkLowStockAlerts();
+        renderInventoryList(document.getElementById('invSearch')?.value || '');
+      }
+
+      function setInventoryQtyDirect(key, value) {
+        if (!materialCatalog[key]) return;
+        materialCatalog[key].qty = Math.max(0, parseFloat(value) || 0);
+        saveMaterialCatalog();
+        checkLowStockAlerts();
+        renderInventoryList(document.getElementById('invSearch')?.value || '');
+      }
+
+      function setInventoryMinQty(key, value) {
+        if (!materialCatalog[key]) return;
+        materialCatalog[key].minQty = Math.max(0, parseFloat(value) || 0);
+        saveMaterialCatalog();
+        checkLowStockAlerts();
+      }
+
+      function setInventoryAlertEnabled(key, enabled) {
+        if (!materialCatalog[key]) return;
+        materialCatalog[key].lowStockAlertEnabled = !!enabled;
+        saveMaterialCatalog();
+        checkLowStockAlerts();
+        renderInventoryList(document.getElementById('invSearch')?.value || '');
+      }
+
+      function renderInventoryList(filterText = '') {
+        const wrap = document.getElementById('inventoryList');
+        if (!wrap) return;
+        renderInventoryStats();
+        const filter = normalizeMaterialKey(filterText);
+        const sortMode = document.getElementById('invSort')?.value || 'qty-asc';
+        const lowOnly = !!document.getElementById('invLowStockOnly')?.checked;
+        let items = Object.values(materialCatalog)
+          .filter(item => !filter || normalizeMaterialKey(item.desc).includes(filter));
+        if (lowOnly) {
+          items = items.filter(item => item.lowStockAlertEnabled && (item.qty || 0) <= (item.minQty || 0));
+        }
+        items.sort((a, b) => {
+          if (sortMode === 'qty-desc') return (b.qty || 0) - (a.qty || 0);
+          if (sortMode === 'name-asc') return a.desc.localeCompare(b.desc);
+          if (sortMode === 'name-desc') return b.desc.localeCompare(a.desc);
+          return (a.qty || 0) - (b.qty || 0); // qty-asc default
+        });
+
+        wrap.innerHTML = '';
+        if (!items.length) {
+          wrap.innerHTML = `<div class="saved-material-empty">No parts found.</div>`;
+          return;
+        }
+
+        items.forEach(item => {
+          const key = normalizeMaterialKey(item.desc);
+          const qty = item.qty || 0;
+          const minQty = item.minQty || 0;
+          const lowFlag = !!item.lowStockAlertEnabled && qty <= minQty;
+
+          const row = document.createElement('div');
+          row.className = 'saved-material-row inv-row' + (lowFlag ? ' inv-row-low' : '');
+          row.innerHTML = `
+            <div class="saved-material-main">
+              <div class="saved-material-name">${esc(item.desc)}</div>
+              <div class="saved-material-meta">
+                Unit: ${esc(item.unit || 'ea')}${lowFlag ? ' &nbsp;\u00b7&nbsp; <span style="color:#ff8a8a;font-weight:700;">LOW STOCK</span>' : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:.6rem;margin-top:.5rem;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;margin:0;color:#bbb;">
+                  Alert at &le; <input type="number" class="inv-min-input" min="0" step="1" value="${minQty}">
+                </label>
+                <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer;margin:0;">
+                  <input type="checkbox" class="inv-alert-toggle" ${item.lowStockAlertEnabled ? 'checked' : ''} style="width:auto;min-height:auto;margin:0;accent-color:#ff4500;">
+                  <span style="color:#bbb;">Alert on</span>
+                </label>
+              </div>
+            </div>
+            <div class="qty-stepper inv-qty-stepper">
+              <button type="button" class="qty-step-btn inv-qty-minus">\u2212</button>
+              <input type="number" class="inv-qty-input" min="0" step="1" value="${qty}">
+              <button type="button" class="qty-step-btn inv-qty-plus">+</button>
+            </div>
+          `;
+
+          row.querySelector('.inv-qty-minus').addEventListener('click', () => adjustInventoryQty(key, -1));
+          row.querySelector('.inv-qty-plus').addEventListener('click', () => adjustInventoryQty(key, 1));
+          row.querySelector('.inv-qty-input').addEventListener('change', function() {
+            setInventoryQtyDirect(key, this.value);
+          });
+          row.querySelector('.inv-min-input').addEventListener('change', function() {
+            setInventoryMinQty(key, this.value);
+          });
+          row.querySelector('.inv-alert-toggle').addEventListener('change', function() {
+            setInventoryAlertEnabled(key, this.checked);
+          });
+
+          wrap.appendChild(row);
+        });
+      }
+
+      function addNewInventoryItem(desc, unit, qty, minQty) {
+        const trimmedDesc = (desc || '').trim();
+        if (!trimmedDesc) { alert('Enter a description first.'); return false; }
+        const key = normalizeMaterialKey(trimmedDesc);
+        const addQty = Math.max(0, parseFloat(qty) || 0);
+        const minQtyNum = Math.max(0, parseFloat(minQty) || 0);
+        if (materialCatalog[key]) {
+          if (!confirm(`"${materialCatalog[key].desc}" is already in your catalog. Add ${addQty} to its current stock of ${materialCatalog[key].qty || 0}?`)) return false;
+          materialCatalog[key].qty = (materialCatalog[key].qty || 0) + addQty;
+          materialCatalog[key].minQty = minQtyNum;
+        } else {
+          materialCatalog[key] = {
+            uuid: generateEntryId(),
+            desc: trimmedDesc,
+            unit: (unit || 'ea').trim() || 'ea',
+            distributorCost: 0,
+            markup: getDefaultMarkupPercent(),
+            customerPrice: 0,
+            priceLastUpdated: new Date().toISOString(),
+            priceAlertEnabled: false,
+            qty: addQty,
+            minQty: minQtyNum,
+            lowStockAlertEnabled: false
+          };
+        }
+        saveMaterialCatalog();
+        checkLowStockAlerts();
+        renderInventoryList(document.getElementById('invSearch')?.value || '');
+        return true;
+      }
+
       function renderSavedMaterialsList(filterText = '') {
         const wrap = document.getElementById('savedMaterialsList');
         if (!wrap) return;
@@ -2802,6 +3166,7 @@
               <div class="saved-material-meta">Unit: ${esc(item.unit || 'ea')} &nbsp;·&nbsp; Cost: $${formatMoney(item.distributorCost || 0)} &nbsp;·&nbsp; Sell: $${formatMoney(item.customerPrice || 0)}</div>
               <div style="display:flex;align-items:center;gap:.5rem;margin-top:.4rem;flex-wrap:wrap;" class="sml-view-actions">
                 <span style="font-size:.76rem;color:${daysColor};">${esc(daysLabel)}</span>
+                ${item.supplierLink ? `<button type="button" class="mini-btn sml-link-btn" style="padding:.25rem .6rem;font-size:.75rem;min-height:auto;background:#0d6efd;">🔗 Check Price</button>` : ''}
                 <button type="button" class="mini-btn sml-edit-btn" style="padding:.25rem .6rem;font-size:.75rem;min-height:auto;background:#ff4500;">✏️ Edit</button>
                 <button type="button" class="mini-btn sml-mark-updated" style="padding:.25rem .55rem;font-size:.75rem;min-height:auto;background:#28a745;">✓ Mark Updated</button>
                 <label style="display:flex;align-items:center;gap:.3rem;font-size:.76rem;cursor:pointer;margin:0;">
@@ -2816,6 +3181,9 @@
                 <div class="sml-edit-grid">
                   <label class="sml-edit-full"><span>Description</span>
                     <input type="text" class="sml-in-desc" value="${esc(item.desc || '')}">
+                  </label>
+                  <label class="sml-edit-full"><span>Supplier Link (optional)</span>
+                    <input type="url" class="sml-in-link" value="${esc(item.supplierLink || '')}" placeholder="Paste Wolseley Express product link" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
                   </label>
                   <label><span>Unit</span>
                     <input type="text" class="sml-in-unit" value="${esc(item.unit || 'ea')}">
@@ -2875,6 +3243,7 @@
           // Save
           row.querySelector('.sml-save-btn').addEventListener('click', () => {
             const newDesc   = row.querySelector('.sml-in-desc').value.trim();
+            const newLink   = normalizeSupplierUrl(row.querySelector('.sml-in-link').value);
             const newUnit   = row.querySelector('.sml-in-unit').value.trim() || 'ea';
             const newCat    = row.querySelector('.sml-in-cat').value || '';
             const newCost   = parseFloat(inCost.value)   || 0;
@@ -2893,6 +3262,7 @@
               desc: newDesc,
               unit: newUnit,
               category: newCat,
+              supplierLink: newLink,
               distributorCost: newCost,
               markup: newMarkup,
               customerPrice: newSell,
@@ -2918,6 +3288,9 @@
             }
           });
           row.querySelector('.sml-delete').addEventListener('click', () => deleteSavedMaterial(item.desc));
+          row.querySelector('.sml-link-btn')?.addEventListener('click', () => {
+            window.open(item.supplierLink, '_blank', 'noopener');
+          });
 
           // ── Mass edit: prepend checkbox if mode is active ──
           if (_massEditActive) {
@@ -3199,7 +3572,9 @@
           laborDescription: document.getElementById('laborDescription').value,
           selectedEntryIds: getSelectedInvoiceEntryIds(),
           groupMaterials: !!document.getElementById('groupMaterialsToggle')?.checked,
-          items
+          items,
+          _invUuid: currentInvoiceUuid,
+          _invLocked: currentInvoiceInventoryLocked
         };
         _ls.setItem('invoiceSession', JSON.stringify(session));
       }
@@ -3225,6 +3600,11 @@
           if (s.laborDescription) document.getElementById('laborDescription').value = s.laborDescription;
           const gmt = document.getElementById('groupMaterialsToggle');
           if (gmt && s.groupMaterials !== undefined) gmt.checked = !!s.groupMaterials;
+
+          // Restore inventory tracking identity so re-deduction isn't triggered
+          // when rows are rebuilt below.
+          currentInvoiceUuid = s._invUuid || null;
+          currentInvoiceInventoryLocked = !!s._invLocked;
 
           if (Array.isArray(s.items) && s.items.length) {
             const tbody = document.querySelector('#itemsTable tbody');
@@ -3296,6 +3676,9 @@
         let catalogDirty = false;
         Object.values(materialCatalog).forEach(item => {
           if (!item.uuid) { item.uuid = generateEntryId(); catalogDirty = true; }
+          if (item.qty === undefined) { item.qty = 0; catalogDirty = true; }
+          if (item.minQty === undefined) { item.minQty = 0; catalogDirty = true; }
+          if (item.lowStockAlertEnabled === undefined) { item.lowStockAlertEnabled = false; catalogDirty = true; }
         });
         if (catalogDirty) saveMaterialCatalog();
 
@@ -5407,6 +5790,7 @@
         if (el('rtHstPct')) el('rtHstPct').textContent = Math.round(hstRate * 100) + '%';
         if (el('rtBalance')) el('rtBalance').textContent = '$' + formatMoney(balance);
         if (el('rtBalanceWrap')) el('rtBalanceWrap').style.display = deposit > 0 ? 'block' : 'none';
+        syncInventoryDeduction();
       }
 
       function createLaborEntryRow(entry, kind, qty) {
@@ -6132,8 +6516,20 @@
         refreshInvoiceDraftList(currentInvoiceId);
       }
 
-      function clearInvoice(skipConfirm = false) {
+      function clearInvoice(skipConfirm = false, finalizeInventory = false) {
         if (!skipConfirm && !confirm('Clear all invoice data? Any unsaved changes will be lost.')) return;
+
+        // The materials on this invoice are either truly used (finalize — keep
+        // the deduction) or this invoice is being abandoned/deleted (restore
+        // the stock back to the truck).
+        if (finalizeInventory) {
+          finalizeInventoryForCurrentInvoice();
+        } else {
+          restoreInventoryForCurrentInvoice();
+        }
+        currentInvoiceUuid = null;
+        currentInvoiceInventoryLocked = false;
+
         _ls.removeItem('invoiceSession');
         document.getElementById('invoiceId').value = '';
         document.getElementById('clientName').value = '';
@@ -6260,7 +6656,7 @@
               : currentLaborDesc);
 
         invoices[invoiceId] = {
-          uuid: invoices[invoiceId]?.uuid || generateEntryId(),
+          uuid: invoices[invoiceId]?.uuid || currentInvoiceUuid || generateEntryId(),
           id: invoiceId,
           clientName: document.getElementById('clientName').value.trim(),
           clientPhone: document.getElementById('clientPhone').value.trim(),
@@ -6280,9 +6676,11 @@
           serviceDate,
           serviceDateLabel,
           status: existingDraft?.status === 'invoiced' ? 'invoiced' : 'draft',
+          inventoryFinalized: !!invoices[invoiceId]?.inventoryFinalized,
           createdAt: invoices[invoiceId]?.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
+        currentInvoiceUuid = invoices[invoiceId].uuid;
 
         saveInvoicesToStorage();
         syncEntryStatusesFromInvoices();
@@ -6326,6 +6724,21 @@
         if (hasContent) {
           if (!confirm(`Load draft "${invoiceId}"? Any unsaved changes to the current invoice will be lost.`)) return;
         }
+
+        // If the form currently holds tentative deductions for an invoice that
+        // was never actually saved as a draft, put that stock back before
+        // switching identity — otherwise it would be silently stranded.
+        const prevFormId = document.getElementById('invoiceId').value.trim();
+        if (currentInvoiceUuid && currentInvoiceUuid !== inv.uuid && (!prevFormId || !invoices[prevFormId])) {
+          restoreInventoryForCurrentInvoice();
+        }
+
+        // Adopt this draft's stable identity for inventory tracking purposes
+        // *before* rows are rebuilt below, so reopening a draft doesn't
+        // re-trigger deductions for materials already accounted for.
+        currentInvoiceUuid = inv.uuid || generateEntryId();
+        inv.uuid = currentInvoiceUuid;
+        currentInvoiceInventoryLocked = !!inv.inventoryFinalized;
 
         document.getElementById('invoiceId').value = inv.id || '';
         document.getElementById('clientName').value = inv.clientName || '';
@@ -6488,6 +6901,10 @@
           }
 
           window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        if (tabId === 'inventoryTab') {
+          renderInventoryList(document.getElementById('invSearch')?.value || '');
         }
       }
 
@@ -6918,6 +7335,7 @@
         const cancelBtn  = document.getElementById('cancelNewMaterial');
         const saveBtn    = document.getElementById('saveNewMaterial');
         const descIn     = document.getElementById('newMatDesc');
+        const linkIn     = document.getElementById('newMatLink');
         const unitIn     = document.getElementById('newMatUnit');
         const catIn      = document.getElementById('newMatCat');
         const costIn     = document.getElementById('newMatCost');
@@ -6925,7 +7343,7 @@
         const sellIn     = document.getElementById('newMatSell');
 
         function resetAddForm() {
-          descIn.value = ''; unitIn.value = ''; catIn.value = '';
+          descIn.value = ''; linkIn.value = ''; unitIn.value = ''; catIn.value = '';
           costIn.value = ''; markupIn.value = ''; sellIn.value = '';
           form.classList.remove('show');
           toggleBtn.textContent = '＋ Add Material';
@@ -6956,6 +7374,7 @@
 
         saveBtn.addEventListener('click', () => {
           const desc   = descIn.value.trim();
+          const link   = normalizeSupplierUrl(linkIn.value);
           const unit   = unitIn.value.trim() || 'ea';
           const cat    = catIn.value || '';
           const cost   = parseFloat(costIn.value)   || 0;
@@ -6968,7 +7387,7 @@
           }
           materialCatalog[key] = {
             uuid: (materialCatalog[key] || {}).uuid || generateEntryId(),
-            desc, unit, category: cat,
+            desc, unit, category: cat, supplierLink: link,
             distributorCost: cost, markup, customerPrice: sell,
             priceLastUpdated: new Date().toISOString(),
             priceAlertEnabled: true
@@ -7023,6 +7442,15 @@
       };
 
       document.getElementById('newInvoiceDraft').onclick = () => {
+        // Put back any stock tentatively pulled for an invoice that was never
+        // actually saved, before wiping the form for a fresh start.
+        const prevId = document.getElementById('invoiceId').value.trim();
+        if (currentInvoiceUuid && (!prevId || !invoices[prevId])) {
+          restoreInventoryForCurrentInvoice();
+        }
+        currentInvoiceUuid = null;
+        currentInvoiceInventoryLocked = false;
+
         _ls.removeItem('invoiceSession');
         document.getElementById('invoiceId').value = '';
         document.getElementById('clientName').value = '';
@@ -7253,7 +7681,7 @@
             const pdfLinkedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
             invoices[invoiceIdForSave] = {
               ...(invoices[invoiceIdForSave] || {}),
-              uuid: invoices[invoiceIdForSave]?.uuid || generateEntryId(),
+              uuid: invoices[invoiceIdForSave]?.uuid || currentInvoiceUuid || generateEntryId(),
               id: invoiceIdForSave,
               clientName: document.getElementById('clientName').value.trim(),
               clientPhone: document.getElementById('clientPhone').value.trim(),
@@ -7275,6 +7703,7 @@
               createdAt: invoices[invoiceIdForSave]?.createdAt || new Date().toISOString(),
               updatedAt: new Date().toISOString()
             };
+            currentInvoiceUuid = invoices[invoiceIdForSave].uuid;
             saveInvoicesToStorage();
           }
 
@@ -7592,7 +8021,7 @@
 
           if (copyType !== 'boss') {
             markSelectedEntriesAsInvoiced(invoiceId);
-            clearInvoice(true);
+            clearInvoice(true, true);
           }
         } catch (err) {
           alert((copyType === 'boss' ? 'Boss copy' : 'Invoice') + ' generation failed. Please refresh and try again.');
@@ -9428,6 +9857,52 @@
       refreshInvoiceDraftList();
       // Check for overdue price alerts after a brief delay
       setTimeout(checkPriceAlerts, 1200);
+      // Check for low-stock parts after a brief delay
+      setTimeout(checkLowStockAlerts, 1300);
+
+      // ── Inventory tab wiring ────────────────────────────────────────────────
+      document.getElementById('invSearch')?.addEventListener('input', function() {
+        renderInventoryList(this.value);
+      });
+      document.getElementById('invSort')?.addEventListener('change', function() {
+        renderInventoryList(document.getElementById('invSearch')?.value || '');
+      });
+      document.getElementById('invLowStockOnly')?.addEventListener('change', function() {
+        renderInventoryList(document.getElementById('invSearch')?.value || '');
+      });
+      document.getElementById('toggleAddInventoryForm')?.addEventListener('click', function() {
+        const form = document.getElementById('addInventoryForm');
+        if (!form) return;
+        const showing = form.style.display !== 'none';
+        form.style.display = showing ? 'none' : 'block';
+        if (!showing) document.getElementById('newInvDesc')?.focus();
+      });
+      document.getElementById('cancelNewInventoryItem')?.addEventListener('click', function() {
+        const form = document.getElementById('addInventoryForm');
+        if (form) form.style.display = 'none';
+        ['newInvDesc', 'newInvUnit', 'newInvQty', 'newInvMin'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      });
+      document.getElementById('saveNewInventoryItem')?.addEventListener('click', function() {
+        const desc = document.getElementById('newInvDesc')?.value || '';
+        const unit = document.getElementById('newInvUnit')?.value || '';
+        const qty  = document.getElementById('newInvQty')?.value || '0';
+        const min  = document.getElementById('newInvMin')?.value || '0';
+        const ok = addNewInventoryItem(desc, unit, qty, min);
+        if (ok) {
+          ['newInvDesc', 'newInvUnit', 'newInvQty', 'newInvMin'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+          });
+          const form = document.getElementById('addInventoryForm');
+          if (form) form.style.display = 'none';
+        }
+      });
+      document.getElementById('openSavedMaterialsFromInventory')?.addEventListener('click', function() {
+        openSavedMaterialsModal();
+      });
 
       // ── Quick Text Import ────────────────────────────────────────────────────
       (function () {
@@ -9875,7 +10350,7 @@
       function saveFitGroupCollapsed(st) {
         try { _ls.setItem(FIT_COLLAPSE_KEY, JSON.stringify(st)); } catch(e) {}
       }
-      const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'customerNameHistory', 'savedCustomTasks', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
+      const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'customerNameHistory', 'savedCustomTasks', 'savedInvoices', 'materialCatalog', 'inventoryLedgers', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
       const els = {
         tab: document.getElementById('blackIronTab'),
         fitGrid: document.getElementById('biFitGrid'),
@@ -9914,37 +10389,13 @@
         itemCount: document.getElementById('biItemCount'),
         totalQty: document.getElementById('biTotalQty'),
         lastSize: document.getElementById('biLastSize'),
-        voiceBox: document.getElementById('biVoiceBox'),
-        calcPipeSize: document.getElementById('biCalcPipeSize'),
-        calcMeasurement: document.getElementById('biCalcMeasurement'),
-        calcStartFitting: document.getElementById('biCalcStartFitting'),
-        calcEndFitting: document.getElementById('biCalcEndFitting'),
-        calcShutoffPosition: document.getElementById('biCalcShutoffPosition'),
-        calcAutoTransfer: document.getElementById('biCalcAutoTransfer'),
-        calcAdd: document.getElementById('biCalcAddLength'),
-        calcTotal: document.getElementById('biCalcTotal'),
-        calcReset: document.getElementById('biCalcReset'),
-        calcLengthList: document.getElementById('biCalcLengthList'),
-        calcResults: document.getElementById('biCalcResults'),
-        pipeCanvas: document.getElementById('biPipeCanvas'),
-        canvasZoomIn: document.getElementById('biCanvasZoomIn'),
-        canvasZoomOut: document.getElementById('biCanvasZoomOut'),
-        canvasResetView: document.getElementById('biCanvasResetView')
+        voiceBox: document.getElementById('biVoiceBox')
       };
 
-      let state = { selectedFitting:'', items:[], lastOd:'1/2', jobName:'', calcEntries:[], calcPreviousFitting:null, calcZoom:1, calcOffsetX:0, calcOffsetY:0 };
+      let state = { selectedFitting:'', items:[], lastOd:'1/2', jobName:'' };
       let recognition = null;
       let pendingVoiceParsed = null;
-      const calcFittingData = {
-        0.5: { elbow: { engagement: 0.64, body: 1.2 }, tee: { engagement: 0.64, body: 1.25 }, coupling: { engagement: 0.64, body: 1.12 }, shutoff: { engagement: 0.64, body: 2.0 } },
-        0.75: { elbow: { engagement: 0.81, body: 1.4 }, tee: { engagement: 0.81, body: 2.0 }, coupling: { engagement: 0.67, body: 1.2 }, shutoff: { engagement: 0.81, body: 2.5 } },
-        1: { elbow: { engagement: 0.92, body: 1.6 }, tee: { engagement: 0.92, body: 2.2 }, coupling: { engagement: 0.78, body: 1.4 }, shutoff: { engagement: 0.92, body: 3.0 } },
-        1.25: { elbow: { engagement: 1.05, body: 1.8 }, tee: { engagement: 1.05, body: 2.4 }, coupling: { engagement: 0.89, body: 1.6 }, shutoff: { engagement: 1.05, body: 3.5 } }
-      };
-      const calcNippleSizes = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 10, 12, 18, 24, 36, 48];
-      let calcDragging = false;
-      let calcDragStartX = 0;
-      let calcDragStartY = 0;
+
 
 
       function esc(s){ return String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
@@ -9968,9 +10419,6 @@
         renderList();
         renderJobHistory();
         els.lastSize.textContent = state.lastOd || '—';
-        if (els.calcPipeSize && !['0.5','0.75','1','1.25'].includes(els.calcPipeSize.value)) els.calcPipeSize.value = '0.5';
-        calcUpdateLengthList();
-        calcDrawLayout();
       }
       function getHistory(){
         try { return JSON.parse(_ls.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
@@ -10220,320 +10668,6 @@
           grouped.sourceCount += 1;
         });
         return [...map.values()];
-      }
-
-      function calcGcd(a,b){ while (b) [a,b] = [b, a % b]; return a; }
-      function calcToFraction(inches){
-        const value = Number(inches || 0);
-        const sixteenths = Math.round(value * 16);
-        const whole = Math.floor(sixteenths / 16);
-        let numerator = Math.abs(sixteenths % 16);
-        if (numerator === 0) return `${whole}`;
-        const divisor = calcGcd(numerator, 16);
-        return whole ? `${whole} ${numerator / divisor}/${16 / divisor}` : `${numerator / divisor}/${16 / divisor}`;
-      }
-      function calcToFeetAndFraction(inches){
-        const value = Number(inches || 0);
-        const feet = Math.floor(value / 12);
-        const remaining = value % 12;
-        return `${feet} ft ${calcToFraction(remaining)} in`;
-      }
-      function calcGetNippleOptions(cutLength, startingEngagement, endingEngagement, endingAdjustment){
-        const sorted = calcNippleSizes
-          .map(size => ({ size, diff: Math.abs(size - cutLength) }))
-          .sort((a,b) => a.diff - b.diff)
-          .slice(0, 3)
-          .map(item => item.size);
-        return sorted.map(nipple => ({
-          nipple,
-          assembled: nipple - startingEngagement - endingEngagement + endingAdjustment,
-          isClosest: nipple === sorted[0]
-        }));
-      }
-      function calcAddTransferItem(fittingType, odSize, sizeDetail, quantity){
-        addItem({ fittingType, odSize, sizeDetail, quantity });
-      }
-      function calcUpdateLengthList(){
-        if (!els.calcLengthList) return;
-        els.calcLengthList.innerHTML = '';
-        state.calcEntries.forEach((entry, index) => {
-          const sizeText = `${entry.pipeSize}"`;
-          if (entry.segments) {
-            const li = document.createElement('li');
-            li.innerHTML = `<b>Length ${index + 1}:</b> ${calcToFraction(entry.assembledLength)} in (${sizeText} pipe) with mid-segment shut-off`;
-            els.calcLengthList.appendChild(li);
-            entry.segments.forEach((seg, subIndex) => {
-              const sub = document.createElement('li');
-              sub.className = 'bi-calc-sub';
-              const startText = seg.startingFitting !== 'none' ? `from ${seg.startingFitting} (-${calcToFraction(seg.startingEngagement)} in)` : '';
-              const endText = seg.endingFittingType !== 'none' ? ` to ${seg.endingFittingType} (${seg.endingFittingAdjustment >= 0 ? '+' : ''}${calcToFraction(Math.abs(seg.endingFittingAdjustment))} in)` : '';
-              const nippleText = seg.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${calcToFraction(opt.assembled)}</b>` : `${opt.nipple} → ${calcToFraction(opt.assembled)}`).join(', ');
-              sub.innerHTML = `Segment ${subIndex + 1}: ${calcToFraction(seg.assembledLength)} in ${startText}${endText}<br>Cut Length: ${calcToFraction(seg.cutLength)} in<br>Nipple Options: ${nippleText}`;
-              els.calcLengthList.appendChild(sub);
-            });
-          } else {
-            const li = document.createElement('li');
-            const startText = entry.startingFitting !== 'none' ? `from ${entry.startingFitting} (-${calcToFraction(entry.startingEngagement)} in)` : '';
-            const endText = entry.endingFittingType !== 'none' ? ` to ${entry.endingFittingType} (${entry.endingFittingAdjustment >= 0 ? '+' : ''}${calcToFraction(Math.abs(entry.endingFittingAdjustment))} in)` : '';
-            const nippleText = entry.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${calcToFraction(opt.assembled)}</b>` : `${opt.nipple} → ${calcToFraction(opt.assembled)}`).join(', ');
-            li.innerHTML = `<b>Length ${index + 1}:</b> ${calcToFraction(entry.assembledLength)} in (${sizeText} pipe) ${startText}${endText}<br>Cut Length: ${calcToFraction(entry.cutLength)} in<br>Nipple Options: ${nippleText}`;
-            els.calcLengthList.appendChild(li);
-          }
-        });
-      }
-      function calcCalculateTotal(){
-        if (!state.calcEntries.length) {
-          els.calcResults.innerHTML = '<div class="bi-calc-error">No measurements added yet.</div>';
-          return;
-        }
-        let totalAssembledLength = 0, totalCutLength = 0, totalStartingEngagement = 0, totalEndingAdjustment = 0;
-        state.calcEntries.forEach(entry => {
-          if (entry.segments) {
-            entry.segments.forEach(seg => {
-              totalAssembledLength += seg.assembledLength;
-              totalCutLength += seg.cutLength;
-              totalStartingEngagement += seg.startingEngagement;
-              totalEndingAdjustment += seg.endingFittingAdjustment;
-            });
-          } else {
-            totalAssembledLength += entry.assembledLength;
-            totalCutLength += entry.cutLength;
-            totalStartingEngagement += entry.startingEngagement;
-            totalEndingAdjustment += entry.endingFittingAdjustment;
-          }
-        });
-        els.calcResults.innerHTML = `
-          <h3>Results</h3>
-          <p>Base Length Total: ${calcToFeetAndFraction(totalAssembledLength)}</p>
-          <p>Cut Length Total: ${calcToFeetAndFraction(totalCutLength)}</p>
-          <p>Total Starting Engagement: ${calcToFraction(totalStartingEngagement)} in</p>
-          <p>Total Ending Adjustment: ${calcToFraction(totalEndingAdjustment)} in</p>
-        `;
-      }
-      function calcTurnDirection(direction){
-        if (direction === 'right') return 'down';
-        if (direction === 'down') return 'left';
-        if (direction === 'left') return 'up';
-        return 'right';
-      }
-      function calcDrawLayout(){
-        const canvas = els.pipeCanvas;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!state.calcEntries.length) return;
-
-        let maxX = 0, maxY = 0, minY = 0;
-        let segments = [];
-        state.calcEntries.forEach(entry => { segments = segments.concat(entry.segments || [entry]); });
-
-        let x = 20, y = canvas.height / 2, direction = 'right';
-        segments.forEach(seg => {
-          const length = seg.assembledLength;
-          if (direction === 'right') maxX = Math.max(maxX, x + length);
-          if (direction === 'left') maxX = Math.max(maxX, x);
-          if (direction === 'down') maxY = Math.max(maxY, y + length);
-          if (direction === 'up') minY = Math.min(minY, y - length);
-          if (seg.endingFittingType === 'elbow') direction = calcTurnDirection(direction);
-        });
-
-        const spreadX = Math.max(maxX, 50);
-        const spreadY = Math.max(maxY - minY, 50);
-        const baseScale = Math.min((canvas.width - 40) / spreadX, (canvas.height - 40) / spreadY);
-
-        ctx.save();
-        ctx.translate(state.calcOffsetX || 0, state.calcOffsetY || 0);
-        ctx.scale(state.calcZoom || 1, state.calcZoom || 1);
-
-        x = 20;
-        y = canvas.height / (2 * (state.calcZoom || 1)) - (minY < 0 ? minY * baseScale : 0);
-        direction = 'right';
-
-        ctx.beginPath();
-        ctx.lineWidth = 2 / (state.calcZoom || 1);
-        ctx.font = `${10 / (state.calcZoom || 1)}px Arial`;
-        ctx.strokeStyle = '#c2410c';
-        ctx.fillStyle = '#111';
-
-        segments.forEach(seg => {
-          const len = seg.assembledLength * baseScale;
-          const startX = x, startY = y;
-          if (direction === 'right') x += len;
-          else if (direction === 'left') x -= len;
-          else if (direction === 'down') y += len;
-          else if (direction === 'up') y -= len;
-
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(x, y);
-
-          const midX = (startX + x) / 2;
-          const midY = (startY + y) / 2;
-          ctx.fillText(`${calcToFraction(seg.assembledLength)}"`, midX + 4 / (state.calcZoom || 1), midY - 6 / (state.calcZoom || 1));
-
-          if (seg.endingFittingType === 'elbow') {
-            direction = calcTurnDirection(direction);
-          }
-        });
-
-        ctx.stroke();
-        ctx.restore();
-      }
-      function calcResetView(){
-        state.calcZoom = 1;
-        state.calcOffsetX = 0;
-        state.calcOffsetY = 0;
-        saveState();
-        calcDrawLayout();
-      }
-      function calcZoom(factor){
-        state.calcZoom = Math.max(0.4, Math.min(3, (state.calcZoom || 1) * factor));
-        saveState();
-        calcDrawLayout();
-      }
-      function calcResetCalculator(){
-        state.calcEntries = [];
-        state.calcPreviousFitting = null;
-        els.calcMeasurement.value = '';
-        els.calcShutoffPosition.value = '';
-        els.calcStartFitting.value = 'none';
-        els.calcEndFitting.value = 'none';
-        els.calcResults.innerHTML = '';
-        calcResetView();
-        saveState();
-        calcUpdateLengthList();
-        calcDrawLayout();
-      }
-      function calcAddMeasurement(){
-        const pipeSize = parseFloat(els.calcPipeSize.value);
-        const assembledLength = parseFloat(els.calcMeasurement.value);
-        const startingFittingType = els.calcStartFitting.value;
-        const endingFittingType = els.calcEndFitting.value;
-        const shutoffPosition = parseFloat(els.calcShutoffPosition.value) || 0;
-        const autoTransfer = !!els.calcAutoTransfer.checked;
-        const odSizeMap = { 0.5: '1/2', 0.75: '3/4', 1: '1', 1.25: '1 1/4' };
-        const odSize = odSizeMap[pipeSize];
-        const fittingMap = { elbow: '90 degree elbow', tee: 'Tee', coupling: 'Coupling', shutoff: 'Shut-off' };
-
-        if (!(assembledLength > 0)) {
-          els.calcResults.innerHTML = '<div class="bi-calc-error">Please enter a valid positive length.</div>';
-          return;
-        }
-        if (shutoffPosition && (shutoffPosition <= 0 || shutoffPosition >= assembledLength)) {
-          els.calcResults.innerHTML = '<div class="bi-calc-error">Shut-off position must be between 0 and the assembled length.</div>';
-          return;
-        }
-
-        const startingEngagement = startingFittingType !== 'none'
-          ? calcFittingData[pipeSize][startingFittingType].engagement
-          : (state.calcEntries.length === 0 ? calcFittingData[pipeSize].elbow.engagement : state.calcPreviousFitting ? calcFittingData[pipeSize][state.calcPreviousFitting].engagement : 0);
-
-        let endingFittingAdjustment = endingFittingType !== 'none' ? calcFittingData[pipeSize][endingFittingType].body - calcFittingData[pipeSize][endingFittingType].engagement : 0;
-        let endingEngagement = endingFittingType !== 'none' ? calcFittingData[pipeSize][endingFittingType].engagement : 0;
-
-        if (shutoffPosition) {
-          const shutoffFitting = calcFittingData[pipeSize].shutoff;
-          const shutoffAdjustment = shutoffFitting.body - shutoffFitting.engagement;
-
-          const firstAssembled = shutoffPosition;
-          const firstBase = firstAssembled + startingEngagement - shutoffAdjustment;
-          const firstCut = firstBase + shutoffFitting.engagement;
-          const firstNippleOptions = calcGetNippleOptions(firstCut, startingEngagement, shutoffFitting.engagement, shutoffAdjustment);
-
-          const secondAssembled = assembledLength - shutoffPosition;
-          const secondBase = secondAssembled + shutoffFitting.engagement - endingFittingAdjustment;
-          const secondCut = secondBase + endingEngagement;
-          const secondNippleOptions = calcGetNippleOptions(secondCut, shutoffFitting.engagement, endingEngagement, endingFittingAdjustment);
-
-          state.calcEntries.push({
-            pipeSize, assembledLength,
-            segments: [
-              {
-                assembledLength: firstAssembled,
-                baseLength: firstBase,
-                cutLength: firstCut,
-                nippleOptions: firstNippleOptions,
-                startingFitting: startingFittingType !== 'none' ? startingFittingType : (state.calcEntries.length === 0 ? 'elbow' : state.calcPreviousFitting || 'none'),
-                endingFittingType: 'shutoff',
-                startingEngagement,
-                endingFittingAdjustment: shutoffAdjustment,
-                endingEngagement: shutoffFitting.engagement
-              },
-              {
-                assembledLength: secondAssembled,
-                baseLength: secondBase,
-                cutLength: secondCut,
-                nippleOptions: secondNippleOptions,
-                startingFitting: 'shutoff',
-                endingFittingType,
-                startingEngagement: shutoffFitting.engagement,
-                endingFittingAdjustment,
-                endingEngagement
-              }
-            ]
-          });
-
-          if (autoTransfer) {
-            if (state.calcEntries.length === 1 && startingFittingType !== 'none') calcAddTransferItem(fittingMap[startingFittingType], odSize, '', 1);
-            calcAddTransferItem('Shut-off', odSize, '', 1);
-            calcAddTransferItem('Nipple', odSize, `${firstNippleOptions[0].nipple}"`, 1);
-            calcAddTransferItem('Nipple', odSize, `${secondNippleOptions[0].nipple}"`, 1);
-            if (endingFittingType !== 'none') calcAddTransferItem(fittingMap[endingFittingType], odSize, '', 1);
-          }
-        } else {
-          const baseLength = assembledLength + startingEngagement - endingFittingAdjustment;
-          const cutLength = baseLength + endingEngagement;
-          const nippleOptions = calcGetNippleOptions(cutLength, startingEngagement, endingEngagement, endingFittingAdjustment);
-
-          state.calcEntries.push({
-            pipeSize, assembledLength, baseLength, cutLength, nippleOptions,
-            startingFitting: startingFittingType !== 'none' ? startingFittingType : (state.calcEntries.length === 0 ? 'elbow' : state.calcPreviousFitting || 'none'),
-            endingFittingType, startingEngagement, endingFittingAdjustment, endingEngagement
-          });
-
-          if (autoTransfer) {
-            if (state.calcEntries.length === 1 && startingFittingType !== 'none') calcAddTransferItem(fittingMap[startingFittingType], odSize, '', 1);
-            calcAddTransferItem('Nipple', odSize, `${nippleOptions[0].nipple}"`, 1);
-            if (endingFittingType !== 'none') calcAddTransferItem(fittingMap[endingFittingType], odSize, '', 1);
-          }
-        }
-
-        if (state.calcPreviousFitting) els.calcStartFitting.value = state.calcPreviousFitting;
-        state.calcPreviousFitting = endingFittingType !== 'none' ? endingFittingType : null;
-
-        saveState();
-        calcUpdateLengthList();
-        calcDrawLayout();
-        els.calcMeasurement.value = '';
-        els.calcShutoffPosition.value = '';
-        els.calcResults.innerHTML = '';
-      }
-      function initCalcCanvas(){
-        const canvas = els.pipeCanvas;
-        if (!canvas) return;
-        canvas.addEventListener('mousedown', e => {
-          calcDragging = true;
-          calcDragStartX = e.clientX - (state.calcOffsetX || 0);
-          calcDragStartY = e.clientY - (state.calcOffsetY || 0);
-          canvas.classList.add('dragging');
-        });
-        window.addEventListener('mousemove', e => {
-          if (!calcDragging) return;
-          state.calcOffsetX = e.clientX - calcDragStartX;
-          state.calcOffsetY = e.clientY - calcDragStartY;
-          calcDrawLayout();
-        });
-        window.addEventListener('mouseup', () => {
-          if (!calcDragging) return;
-          calcDragging = false;
-          canvas.classList.remove('dragging');
-          saveState();
-        });
-        canvas.addEventListener('mouseleave', () => {
-          if (!calcDragging) return;
-          calcDragging = false;
-          canvas.classList.remove('dragging');
-          saveState();
-        });
       }
 
 
@@ -10980,14 +11114,6 @@
       els.export.addEventListener('click', exportCsv);
       els.clear.addEventListener('click', clearList);
       els.calcCut.addEventListener('click', addCutPipe);
-      els.calcAdd.addEventListener('click', calcAddMeasurement);
-      els.calcTotal.addEventListener('click', calcCalculateTotal);
-      els.calcReset.addEventListener('click', calcResetCalculator);
-      els.canvasZoomIn.addEventListener('click', () => calcZoom(1.2));
-      els.canvasZoomOut.addEventListener('click', () => calcZoom(0.8));
-      els.canvasResetView.addEventListener('click', calcResetView);
-      els.calcMeasurement.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); calcAddMeasurement(); } });
-      els.calcShutoffPosition.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); calcAddMeasurement(); } });
       els.jobName.addEventListener('change', () => { saveHistory(els.jobName.value); saveState(); });
       els.jobName.addEventListener('input', saveState);
       els.od.addEventListener('change', () => { els.cutPipeSize.value = els.od.value; saveState(); });
@@ -11004,7 +11130,6 @@
       window.setActiveTab = function(tabId){
         originalSetActiveTab(tabId);
         if (tabId === 'blackIronTab') {
-          calcDrawLayout();
           if (!els.jobName.value.trim()) {
             const inv = document.getElementById('invoiceId').value.trim();
             const client = document.getElementById('clientName').value.trim();
@@ -11013,7 +11138,6 @@
           }
         }
       };
-      initCalcCanvas();
       loadState();
       initVoice();
     })();
@@ -11128,19 +11252,6 @@
       }
     });
 
-    document.addEventListener("DOMContentLoaded",function(){
-      const sendBtn=document.getElementById("biSendToParts");
-      if(sendBtn){
-        sendBtn.addEventListener("click",function(){
-          const calcBtn=document.getElementById("biCalcTotal");
-          if(calcBtn){calcBtn.click();}
-          const tabBtn=[...document.querySelectorAll('.tab-btn')].find(b=>b.dataset.tab==="blackIronTab");
-          if(tabBtn){tabBtn.click();}
-          alert("Calculated items sent. Review them in the Black Iron tab.");
-        });
-      }
-    });
-
     // ── Black Iron collapsible sections ────────────────────────────────────────
     const BI_COLLAPSE_KEY = 'biSectionCollapsed';
     function biLoadCollapsed() {
@@ -11204,6 +11315,13 @@
       <span id="priceAlertMsg"></span>
       <button type="button" id="priceAlertGoTo" class="mini-btn" style="background:#ff4500;">Go To Saved Materials</button>
       <button type="button" id="priceAlertDismiss" class="mini-btn" style="background:#555;">Dismiss</button>
+    </div>
+
+    <!-- Low stock banner -->
+    <div id="lowStockBanner">
+      <span id="lowStockMsg"></span>
+      <button type="button" id="lowStockGoTo" class="mini-btn" style="background:#ff4500;">Go To Inventory</button>
+      <button type="button" id="lowStockDismiss" class="mini-btn" style="background:#555;">Dismiss</button>
     </div>
 
     <!-- Undo toast -->
@@ -11270,7 +11388,6 @@
           // Skip inputs that don't need a clear button
           if (input.closest('#itemsTable'))        return; // invoice line items
           if (input.closest('.profile-grid'))      return; // clients/addresses modal
-          if (input.closest('.bi-calc-toolbar'))   return; // pipe calc fields
           if (input.closest('.saved-materials-body')) return; // search modal
           addClearBtn(input);
         });
