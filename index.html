@@ -918,8 +918,7 @@
         text-align: center;
         border-radius: 0 !important;
         flex: 1;
-        min-width: 0;
-        max-width: 56px;
+        min-width: 46px;
         padding: .4rem .25rem !important;
         background: #1e1e1e;
         border: 1px solid rgba(255,69,0,.45);
@@ -3610,8 +3609,10 @@
           if (Array.isArray(s.items) && s.items.length) {
             const tbody = document.querySelector('#itemsTable tbody');
             tbody.innerHTML = '';
-            // Filter out any stale row types that are now auto-managed
-            const STALE_TYPES = ['overtime-service-charge', 'regular-labor', 'overtime-labor'];
+            // Only filter out overtime-service-charge (auto-managed); restore
+            // regular-labor and overtime-labor so a PWA reload after boss copy
+            // doesn't silently wipe the labour rows while leaving materials intact.
+            const STALE_TYPES = ['overtime-service-charge'];
             s.items.forEach(item => {
               if (STALE_TYPES.includes(item.type || '')) return;
               createItemRow(item);
@@ -8015,7 +8016,11 @@
           rememberCurrentLocationProfile(true, selectedEntries.length ? getSingleFilteredAddress(selectedEntries) : clientAddress);
 
           if (invoiceId && invoices[invoiceId]) {
-            invoices[invoiceId].status = 'invoiced';
+            // Only mark invoiced for customer copy — boss copy is internal and
+            // the draft must stay open so the customer invoice can still be generated.
+            if (copyType !== 'boss') {
+              invoices[invoiceId].status = 'invoiced';
+            }
             invoices[invoiceId].updatedAt = new Date().toISOString();
             saveInvoicesToStorage();
           }
