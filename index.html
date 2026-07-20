@@ -5528,6 +5528,7 @@
         desc.addEventListener('blur', () => {
           if (USE_CUSTOM_MATERIAL_DROPDOWN) setTimeout(hideMaterialDropdown, 120);
           saveCurrentMaterial();
+          saveInvoiceSession();
         });
         unit.addEventListener('blur', saveCurrentMaterial);
         qty.addEventListener('input', recalc);
@@ -7014,6 +7015,7 @@
                 <option value="up">Up</option>
                 <option value="down">Down</option>
                 <option value="mark-unbilled">Mark Unbilled</option>
+                <option value="mark-invoiced">✅ Mark Invoiced</option>
                 <option value="delete">🗑 Delete</option>
               </select>
             </td>`;
@@ -7162,6 +7164,12 @@
             invoices[currentInvoiceId].updatedAt = new Date().toISOString();
             saveInvoicesToStorage();
           }
+
+          saveData();
+          renderTable();
+        }
+        else if (act === 'mark-invoiced') {
+          entries[i].billingStatus = 'invoiced';
 
           saveData();
           renderTable();
@@ -7674,6 +7682,12 @@
         loading.style.display = 'block';
 
         try {
+          // Snapshot the live session immediately. If the OS backgrounds/reloads
+          // the PWA during PDF generation or the native save/share sheet (a known
+          // iOS issue), loadInvoiceSession() restores from this snapshot — so it
+          // must reflect everything currently on screen, not a stale cached copy.
+          saveInvoiceSession();
+
           // Auto-save draft before generating so nothing is lost
           const invoiceIdForSave = document.getElementById('invoiceId').value.trim();
           if (invoiceIdForSave) {
