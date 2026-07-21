@@ -1,6 +1,5 @@
 
 
-
   <!DOCTYPE html>
   <html lang="en">
   <head>
@@ -4198,32 +4197,62 @@
       // ignores once the app is running standalone (added to the Home Screen).
       // Instead of downloading, it navigates the PWA's own single window to the
       // blob: URL — the app appears to freeze with no way back and no file saved.
-      // Fix: hand the PDF to a separate window instead. iOS opens that in Safari
-      // itself, leaving the PWA's own window/state completely untouched. That
-      // window must be opened synchronously in direct response to the tap, or
-      // iOS's popup blocker silently kills it — so any caller that does async
-      // work before the PDF is ready (e.g. loading the logo) should open a blank
-      // window immediately on tap and pass it in as preOpenedWindow.
+      //
+      // Fix, in order of preference:
+      //  1. Web Share API with a file. This shows the native share sheet as an
+      //     overlay ON TOP of the running app — the PWA's window never navigates,
+      //     backgrounds, or reloads, so nothing is lost and the app stays exactly
+      //     where it was (no black screen, no bounce back to the default tab).
+      //  2. Hand the PDF to a separate window (iOS opens that in Safari). This
+      //     works but backgrounds the PWA, which iOS can reclaim/reload — landing
+      //     back on the default tab when the person switches back. Only used if
+      //     Share isn't available. That window must be opened synchronously in
+      //     direct response to the tap, or iOS's popup blocker kills it — so any
+      //     caller with async work before the PDF is ready (e.g. loading the logo)
+      //     should open a blank window immediately on tap and pass it as preOpenedWindow.
+      //  3. Plain doc.save(), for regular (non-standalone) browser tabs where it
+      //     already works fine.
       function isStandalonePwa() {
         return window.navigator.standalone === true ||
           (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
       }
 
-      function deliverGeneratedPdf(doc, filename, preOpenedWindow = null) {
+      async function deliverGeneratedPdf(doc, filename, preOpenedWindow = null) {
         if (!isStandalonePwa()) {
+          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
           doc.save(filename);
           return;
         }
+
+        let file;
         try {
           const blob = doc.output('blob');
-          const file = new File([blob], filename, { type: 'application/pdf' });
+          file = new File([blob], filename, { type: 'application/pdf' });
+        } catch (err) {
+          console.warn('PDF build failed, falling back to doc.save():', err);
+          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
+          doc.save(filename);
+          return;
+        }
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
+            await navigator.share({ files: [file] });
+            return;
+          } catch (shareErr) {
+            if (shareErr?.name === 'AbortError') return; // person dismissed the sheet — done
+            console.warn('Share failed, falling back to window hand-off:', shareErr);
+          }
+        }
+
+        try {
           const url = URL.createObjectURL(file);
-          const target = (preOpenedWindow && !preOpenedWindow.closed) ? preOpenedWindow : window.open(url, '_blank');
+          const target = (preOpenedWindow && !preOpenedWindow.closed) ? preOpenedWindow : window.open('', '_blank');
           if (target) {
             target.location.href = url;
             setTimeout(() => URL.revokeObjectURL(url), 60000);
           } else {
-            // Popup blocked — fall back rather than deliver nothing
             doc.save(filename);
           }
         } catch (err) {
@@ -4233,8 +4262,11 @@
       }
 
       // ── Timesheet Day PDF ─────────────────────────────────────────────────────
-      async function generateTimesheetDayPdf(dateStr, dayEntries, employee) {
-        if (!dayEntries || !dayEntries.length) return;
+      async function generateTimesheetDayPdf(dateStr, dayEntries, employee, preOpenedWindow = null) {
+        if (!dayEntries || !dayEntries.length) {
+          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
+          return;
+        }
         try {
           const { jsPDF } = window.jspdf;
           if (!jsPDF) throw new Error('jsPDF not loaded');
@@ -4311,15 +4343,16 @@
           if (totalOT > 0) doc.text('Total Overtime Hours: ' + totalOT.toFixed(2), 10, finalY + 7);
 
           const safeEmployee = (employee || 'Timesheet').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-          deliverGeneratedPdf(doc, safeEmployee + '_' + dateStr + '_Timesheet.pdf');
+          deliverGeneratedPdf(doc, safeEmployee + '_' + dateStr + '_Timesheet.pdf', preOpenedWindow);
         } catch (err) {
           console.warn('Timesheet PDF generation failed:', err);
+          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
           // Non-blocking — new day still proceeds
         }
       }
       // ─────────────────────────────────────────────────────────────────────────
 
-      function startNewDay() {
+      async function startNewDay(preOpenedWindow = null) {
         const currentDate = document.getElementById('sessionDate').value || getTodayDateString();
         const nextDate = getNextDateString(currentDate);
 
@@ -4329,9 +4362,12 @@
 
         const archived = archiveCurrentTimesheetDay();
 
-        // Generate PDF of the day being closed (fire-and-forget; non-blocking)
+        // Generate PDF of the day being closed before continuing, so the
+        // confirmation below doesn't pop up while the share sheet is mid-appear
         if (entriesSnap.length) {
-          generateTimesheetDayPdf(currentDate, entriesSnap, employee);
+          await generateTimesheetDayPdf(currentDate, entriesSnap, employee, preOpenedWindow);
+        } else if (preOpenedWindow && !preOpenedWindow.closed) {
+          preOpenedWindow.close();
         }
 
         entries = [];
@@ -4345,7 +4381,7 @@
         alert((archived
           ? `Archived ${currentDate} and started a new day on ${nextDate}.`
           : `Started a new day on ${nextDate}.`) +
-          (entriesSnap.length ? '\n\nTimesheet PDF saved to Downloads.' : ''));
+          (entriesSnap.length ? '\n\nTimesheet PDF ready — save or share it from the sheet that opened.' : ''));
       }
 
 
@@ -7335,13 +7371,16 @@
       };
 
       document.getElementById('newDayButton').onclick = () => {
+        const preOpenedWindow = (isStandalonePwa() && entries.length) ? window.open('', '_blank') : null;
         if (!entries.length) {
           startNewDay();
           return;
         }
 
         if (confirm('Archive the current day, clear the timesheet, and move to the next date?')) {
-          startNewDay();
+          startNewDay(preOpenedWindow);
+        } else if (preOpenedWindow && !preOpenedWindow.closed) {
+          preOpenedWindow.close();
         }
       };
 
