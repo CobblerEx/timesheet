@@ -4352,7 +4352,7 @@
       }
       // ─────────────────────────────────────────────────────────────────────────
 
-      async function startNewDay(preOpenedWindow = null) {
+      function startNewDay(preOpenedWindow = null) {
         const currentDate = document.getElementById('sessionDate').value || getTodayDateString();
         const nextDate = getNextDateString(currentDate);
 
@@ -4362,10 +4362,11 @@
 
         const archived = archiveCurrentTimesheetDay();
 
-        // Generate PDF of the day being closed before continuing, so the
-        // confirmation below doesn't pop up while the share sheet is mid-appear
+        // Generate PDF of the day being closed. Fire-and-forget — this must NOT
+        // block the archiving/clear/render below on the share sheet being
+        // dismissed, or the app appears to hang until the person deals with it.
         if (entriesSnap.length) {
-          await generateTimesheetDayPdf(currentDate, entriesSnap, employee, preOpenedWindow);
+          generateTimesheetDayPdf(currentDate, entriesSnap, employee, preOpenedWindow);
         } else if (preOpenedWindow && !preOpenedWindow.closed) {
           preOpenedWindow.close();
         }
