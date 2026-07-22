@@ -4203,13 +4203,11 @@
       //     overlay ON TOP of the running app — the PWA's window never navigates,
       //     backgrounds, or reloads, so nothing is lost and the app stays exactly
       //     where it was (no black screen, no bounce back to the default tab).
-      //  2. Hand the PDF to a separate window (iOS opens that in Safari). This
-      //     works but backgrounds the PWA, which iOS can reclaim/reload — landing
-      //     back on the default tab when the person switches back. Only used if
-      //     Share isn't available. That window must be opened synchronously in
-      //     direct response to the tap, or iOS's popup blocker kills it — so any
-      //     caller with async work before the PDF is ready (e.g. loading the logo)
-      //     should open a blank window immediately on tap and pass it as preOpenedWindow.
+      //  2. Hand the PDF to a separate window (iOS opens that in Safari) — only
+      //     if Share isn't available. NOTE: on a standalone iOS PWA, calling
+      //     window.open() AT ALL — even with a blank URL "just in case" — hands
+      //     the screen to Safari immediately. Do not call it speculatively; only
+      //     open it right here, at the moment it's actually needed.
       //  3. Plain doc.save(), for regular (non-standalone) browser tabs where it
       //     already works fine.
       function isStandalonePwa() {
@@ -4217,9 +4215,8 @@
           (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
       }
 
-      async function deliverGeneratedPdf(doc, filename, preOpenedWindow = null) {
+      async function deliverGeneratedPdf(doc, filename) {
         if (!isStandalonePwa()) {
-          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
           doc.save(filename);
           return;
         }
@@ -4230,14 +4227,12 @@
           file = new File([blob], filename, { type: 'application/pdf' });
         } catch (err) {
           console.warn('PDF build failed, falling back to doc.save():', err);
-          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
           doc.save(filename);
           return;
         }
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
-            if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
             await navigator.share({ files: [file] });
             return;
           } catch (shareErr) {
@@ -4248,9 +4243,8 @@
 
         try {
           const url = URL.createObjectURL(file);
-          const target = (preOpenedWindow && !preOpenedWindow.closed) ? preOpenedWindow : window.open('', '_blank');
+          const target = window.open(url, '_blank');
           if (target) {
-            target.location.href = url;
             setTimeout(() => URL.revokeObjectURL(url), 60000);
           } else {
             doc.save(filename);
@@ -4262,11 +4256,8 @@
       }
 
       // ── Timesheet Day PDF ─────────────────────────────────────────────────────
-      async function generateTimesheetDayPdf(dateStr, dayEntries, employee, preOpenedWindow = null) {
-        if (!dayEntries || !dayEntries.length) {
-          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
-          return;
-        }
+      async function generateTimesheetDayPdf(dateStr, dayEntries, employee) {
+        if (!dayEntries || !dayEntries.length) return;
         try {
           const { jsPDF } = window.jspdf;
           if (!jsPDF) throw new Error('jsPDF not loaded');
@@ -4343,16 +4334,15 @@
           if (totalOT > 0) doc.text('Total Overtime Hours: ' + totalOT.toFixed(2), 10, finalY + 7);
 
           const safeEmployee = (employee || 'Timesheet').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-          deliverGeneratedPdf(doc, safeEmployee + '_' + dateStr + '_Timesheet.pdf', preOpenedWindow);
+          deliverGeneratedPdf(doc, safeEmployee + '_' + dateStr + '_Timesheet.pdf');
         } catch (err) {
           console.warn('Timesheet PDF generation failed:', err);
-          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
           // Non-blocking — new day still proceeds
         }
       }
       // ─────────────────────────────────────────────────────────────────────────
 
-      function startNewDay(preOpenedWindow = null) {
+      function startNewDay() {
         const currentDate = document.getElementById('sessionDate').value || getTodayDateString();
         const nextDate = getNextDateString(currentDate);
 
@@ -4366,9 +4356,7 @@
         // block the archiving/clear/render below on the share sheet being
         // dismissed, or the app appears to hang until the person deals with it.
         if (entriesSnap.length) {
-          generateTimesheetDayPdf(currentDate, entriesSnap, employee, preOpenedWindow);
-        } else if (preOpenedWindow && !preOpenedWindow.closed) {
-          preOpenedWindow.close();
+          generateTimesheetDayPdf(currentDate, entriesSnap, employee);
         }
 
         entries = [];
@@ -7372,16 +7360,13 @@
       };
 
       document.getElementById('newDayButton').onclick = () => {
-        const preOpenedWindow = (isStandalonePwa() && entries.length) ? window.open('', '_blank') : null;
         if (!entries.length) {
           startNewDay();
           return;
         }
 
         if (confirm('Archive the current day, clear the timesheet, and move to the next date?')) {
-          startNewDay(preOpenedWindow);
-        } else if (preOpenedWindow && !preOpenedWindow.closed) {
-          preOpenedWindow.close();
+          startNewDay();
         }
       };
 
@@ -7757,7 +7742,7 @@
         return !!document.getElementById('groupMaterialsToggle')?.checked;
       }
 
-      async function generateInvoicePdf(copyType = 'customer', { returnBlob = false, preOpenedWindow = null } = {}) {
+      async function generateInvoicePdf(copyType = 'customer', { returnBlob = false } = {}) {
         const loading = document.getElementById('loading');
         loading.innerHTML = '<div class="spinner"></div><br>' + (copyType === 'boss' ? 'Generating Boss Copy...' : 'Generating Invoice...');
         loading.style.display = 'block';
@@ -7816,7 +7801,6 @@
 
           // Allow generation with no checked entries if a draft is loaded
           if (!selectedEntries.length && !invoiceId) {
-            if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
             return alert('Select at least one timesheet entry, or load a saved draft first.');
           }
 
@@ -8100,7 +8084,7 @@
           }
 
 
-          deliverGeneratedPdf(doc, pdfFilename, preOpenedWindow);
+          deliverGeneratedPdf(doc, pdfFilename);
 
           _ls.setItem('lastClient', JSON.stringify({
             name: clientName,
@@ -8126,7 +8110,6 @@
             clearInvoice(true, true);
           }
         } catch (err) {
-          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
           alert((copyType === 'boss' ? 'Boss copy' : 'Invoice') + ' generation failed. Please refresh and try again.');
           console.error(err);
         } finally {
@@ -8135,30 +8118,26 @@
       }
 
       document.getElementById('generateInvoice').onclick = async () => {
-        const preOpenedWindow = isStandalonePwa() ? window.open('', '_blank') : null;
-        generateInvoicePdf('customer', { preOpenedWindow });
+        generateInvoicePdf('customer');
       };
       document.getElementById('generateBossCopy').onclick = async () => {
-        const preOpenedWindow = isStandalonePwa() ? window.open('', '_blank') : null;
-        generateInvoicePdf('boss', { preOpenedWindow });
+        generateInvoicePdf('boss');
       };
 
       // ── Boss Quote Info PDF ───────────────────────────────────────────────
       document.getElementById('generateBossQuote').onclick = async () => {
-        const preOpenedWindow = isStandalonePwa() ? window.open('', '_blank') : null;
         const loading = document.getElementById('loading');
         loading.innerHTML = '<div class="spinner"></div><br>Building Quote Info…';
         loading.style.display = 'block';
-        try { await generateBossQuotePdf(preOpenedWindow); }
+        try { await generateBossQuotePdf(); }
         catch(err) {
-          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
           alert('Quote Info PDF failed.\n\n' + (err?.message || ''));
           console.error(err);
         }
         finally { loading.style.display = 'none'; }
       };
 
-      async function generateBossQuotePdf(preOpenedWindow = null) {
+      async function generateBossQuotePdf() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const PAGE_W = 210, PAGE_H = 297, MARGIN = 12;
@@ -8386,7 +8365,7 @@
 
         const safe = (clientName||'Client').replace(/[^a-z0-9]/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
         const dateStr = selectedEntries.length ? getServiceDateForEntries(selectedEntries) : new Date().toISOString().split('T')[0];
-        deliverGeneratedPdf(doc, `${safe}_${dateStr}_Boss_Quote_Info.pdf`, preOpenedWindow);
+        deliverGeneratedPdf(doc, `${safe}_${dateStr}_Boss_Quote_Info.pdf`);
       }
       // ── End Boss Quote Info ───────────────────────────────────────────────
 
