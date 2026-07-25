@@ -1433,6 +1433,8 @@
       #jobPhotosGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; margin-top:.85rem; }
       @media (max-width:480px) { #jobPhotosGrid { grid-template-columns:repeat(2,1fr); } }
 
+      #appBuildTag { text-align:center; font-size:.72rem; color:#888; letter-spacing:.03em; margin:-.6rem 0 .6rem; user-select:text; }
+
     </style>
   </head>
   <body>
@@ -1535,6 +1537,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
+    <div id="appBuildTag">Build 3 · 2026-07-25</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -3845,11 +3848,24 @@
         return base.toISOString().split('T')[0];
       }
 
+      // In-memory cache: getArchivedDays() previously re-ran JSON.parse on the
+      // ENTIRE archive string from localStorage every time it was called — and
+      // it's called on every renderTable() render (via renderInvoiceEntrySelector),
+      // i.e. on every add/edit/delete/reorder, all day. As the archive grows
+      // over months of daily use, that cost grows too. New Day and Restore both
+      // stack an archive read/write right before a renderTable() call that reads
+      // it again, concentrating the cost into one moment. Cache it and only
+      // re-parse if something outside this file touches localStorage directly.
+      let _archiveCache = null;
       function getArchivedDays() {
-        return JSON.parse(_ls.getItem('timesheetArchive') || '[]');
+        if (_archiveCache === null) {
+          _archiveCache = JSON.parse(_ls.getItem('timesheetArchive') || '[]');
+        }
+        return _archiveCache;
       }
 
       function saveArchivedDays(days) {
+        _archiveCache = days;
         _ls.setItem('timesheetArchive', JSON.stringify(days));
       }
 
@@ -4075,7 +4091,14 @@
         clearForm();
         setActiveTab('timesheetTab');
         toggleArchiveDrawer(true);
-        alert(`Restored ${selected.day.date || 'archived timesheet'} to the Timesheet tab.`);
+
+        // Same keyboard/alert race as startNewDay() — clearForm() focused
+        // jobName, so blur and let the keyboard actually dismiss before the
+        // blocking alert steals the main thread.
+        document.activeElement && document.activeElement.blur();
+        setTimeout(() => {
+          alert(`Restored ${selected.day.date || 'archived timesheet'} to the Timesheet tab.`);
+        }, 300);
       }
 
       // ── Archive CSV / ZIP download helpers ──────────────────────────────────
@@ -4367,10 +4390,20 @@
         document.getElementById('timeIn').value  = '08:00';
         document.getElementById('timeOut').value = '08:30';
 
-        alert((archived
-          ? `Archived ${currentDate} and started a new day on ${nextDate}.`
-          : `Started a new day on ${nextDate}.`) +
-          (entriesSnap.length ? '\n\nTimesheet PDF ready — save or share it from the sheet that opened.' : ''));
+        // clearForm() just called .focus() on jobName, which triggers the iOS
+        // software keyboard's slide-up animation. Firing a blocking alert()
+        // synchronously while that animation is still in flight is a known
+        // WKWebView trap on standalone PWAs — it can leave the webview stuck
+        // waiting on a transition the alert just interrupted, which is exactly
+        // the kind of hang that needs a force-quit to clear. Blur first, then
+        // give the keyboard a moment to actually dismiss before the alert.
+        document.activeElement && document.activeElement.blur();
+        setTimeout(() => {
+          alert((archived
+            ? `Archived ${currentDate} and started a new day on ${nextDate}.`
+            : `Started a new day on ${nextDate}.`) +
+            (entriesSnap.length ? '\n\nTimesheet PDF ready — save or share it from the sheet that opened.' : ''));
+        }, 300);
       }
 
 
@@ -5419,7 +5452,12 @@
         entries = imported;
         renderTable();
         clearForm();
-        alert(`Imported ${imported.length} entries for ${date}.`);
+
+        // Same keyboard/alert race as startNewDay()/restoreArchiveDay() — blur
+        // the field clearForm() just focused and let the keyboard dismiss
+        // before the blocking alert.
+        document.activeElement && document.activeElement.blur();
+        setTimeout(() => { alert(`Imported ${imported.length} entries for ${date}.`); }, 300);
       }
 
       document.getElementById('importExcelInput').addEventListener('change', async (e) => {
