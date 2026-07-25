@@ -7105,6 +7105,16 @@
           tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
         });
 
+        // ── Delegated listeners (bound ONCE per tbody element) ───────────────
+        // renderTable() runs on every add/edit/reorder/delete, but tbody itself
+        // persists across renders (only its rows get wiped via innerHTML='').
+        // Previously these addEventListener calls ran unconditionally every
+        // render, so the same tbody accumulated a fresh set of 9 listeners
+        // each time — hundreds by the end of a day — which is what caused the
+        // freeze after New Day / Restore. Guard so binding happens exactly once.
+        if (!tbody._delegatedBound) {
+        tbody._delegatedBound = true;
+
         // ── Delegated See more / See less toggle ────────────────────────────
         tbody.addEventListener('click', (ev) => {
           const btn = ev.target.closest('.desc-toggle');
@@ -7185,6 +7195,7 @@
             editEntry(parseInt(tr.dataset.index, 10));
           });
         }
+        } // end tbody._delegatedBound guard
         // ────────────────────────────────────────────────────────────────────
 
         const { h, m } = decimalToHM(totalDec);
