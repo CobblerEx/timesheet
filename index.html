@@ -2784,6 +2784,34 @@
         saveMaterialCatalog();
       }
 
+      // Commits any brand-new (never-before-seen) material descriptions currently
+      // sitting in the invoice rows into the catalog. Existing materials already
+      // sync live as you edit their price/unit; this only handles NEW names, and
+      // only at natural "I'm done with this row" checkpoints (draft save, PDF/quote
+      // generation, saving a template) — not on every field blur — so a partial
+      // description like "1/2 PVC" typed on the way to "1/2 PVC clips" never gets
+      // written to the catalog just because focus briefly left the field.
+      function commitNewMaterialsFromInvoice() {
+        const skipTypes = new Set(['regular-labor', 'overtime-labor', 'service-charge']);
+        document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+          const type = row.dataset.type || '';
+          if (skipTypes.has(type) || type.startsWith('labor-')) return;
+          const descEl = row.querySelector('.item-desc');
+          if (!descEl) return;
+          const desc = descEl.value.trim();
+          if (!desc) return;
+          const key = normalizeMaterialKey(desc);
+          if (materialCatalog[key]) return; // already known — nothing new to commit
+          saveMaterialFromValues({
+            desc,
+            unit: row.querySelector('.item-unit')?.value,
+            distributorCost: row.querySelector('.item-distributor-cost')?.value,
+            markup: row.querySelector('.item-markup')?.value,
+            customerPrice: row.querySelector('.item-customer-price')?.value
+          });
+        });
+      }
+
       function getSavedMaterial(desc) {
         const key = normalizeMaterialKey(desc);
         return key ? materialCatalog[key] || null : null;
@@ -5577,6 +5605,12 @@
 
         function saveCurrentMaterial(markPriceUpdated = false) {
           if ((tr.dataset.type || '').startsWith('labor-')) return;
+          // Only sync an ALREADY-saved material's price/unit here. A name that
+          // isn't in the catalog yet is still being typed/edited — it gets added
+          // once the invoice is actually saved, generated, or turned into a
+          // template (see commitNewMaterialsFromInvoice), not on every blur.
+          const key = normalizeMaterialKey(desc.value);
+          if (!key || !materialCatalog[key]) return;
           saveMaterialFromValues({
             desc: desc.value,
             unit: unit.value,
@@ -6677,6 +6711,7 @@
           alert('Enter or load an Invoice / Work Order ID first.');
           return;
         }
+        commitNewMaterialsFromInvoice();
 
         let selectedIds = getSelectedInvoiceEntryIds();
         const existingDraft = invoices[invoiceId];
@@ -7802,6 +7837,7 @@
           // iOS issue), loadInvoiceSession() restores from this snapshot — so it
           // must reflect everything currently on screen, not a stale cached copy.
           saveInvoiceSession();
+          commitNewMaterialsFromInvoice();
 
           // Auto-save draft before generating so nothing is lost
           const invoiceIdForSave = document.getElementById('invoiceId').value.trim();
@@ -8187,6 +8223,7 @@
       };
 
       async function generateBossQuotePdf() {
+        commitNewMaterialsFromInvoice();
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const PAGE_W = 210, PAGE_H = 297, MARGIN = 12;
@@ -9952,6 +9989,7 @@
 
         // ── Save Invoice Materials as Template ──
         document.getElementById('saveAsTemplate').addEventListener('click', () => {
+          commitNewMaterialsFromInvoice();
           const allItems = [...document.querySelectorAll('#itemsTable tbody tr')];
           const matItems = allItems
             .filter(row => {
