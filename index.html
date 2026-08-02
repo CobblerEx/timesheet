@@ -334,25 +334,29 @@
       }
 
       /* ── Invoice items: card layout on mobile ──
-         Laid out with CSS Grid areas directly on <tr>, so the <td> elements
-         stay flat, valid children of <tr> at all times (desktop table layout
-         and mobile card layout are two views of the SAME markup — no DOM
-         surgery). Previously this reparented the field/footer <td>s into
-         <div> wrappers at runtime, producing <td> nested inside <div> inside
-         <td> with no <tr> in between. That's invalid table structure, and
-         WebKit would intermittently mis-box it after a dynamic row insert —
-         the "mush" of the description placeholder overlapping the qty row. */
+         Root-caused: Safari/WebKit has long-documented bugs specifically
+         around overriding display to grid/flex on native <tr>/<td>
+         elements (table cells can end up mis-boxed, mis-counted, or
+         skipped — see WebKit bug tracker + MDN browser-compat-data #19994).
+         The previous version of this put `display:grid` + `grid-area`
+         directly on the <tr>/<td>, which is exactly that bug pattern —
+         it worked in Chromium (and often in Safari) but was never
+         reliable, which is why the "mush" of the description placeholder
+         overlapping the qty row kept coming back.
+         Fix: <tr> and <td> here NEVER get display:grid or display:flex —
+         only plain display:block, the one override WebKit's table
+         "fixup" reliably respects. All real 2D layout (fields side by
+         side, footer split into amount + button) happens on plain <div>s
+         *inside* each <td> (see .imt-group-grid / .imt-footer-grid below),
+         which have zero table ancestry, so the bug can't reach them.
+         Field <td>s use colspan so the same markup still lines up under
+         the 8 real <th> columns on desktop, where <tr>/<td> are left
+         completely untouched (native table layout — no override, no
+         bug risk). */
       @media (max-width:640px) {
         #itemsTable thead { display:none; }
         #itemsTable tbody tr {
-          display:grid;
-          grid-template-columns:1fr 1fr 1fr;
-          grid-template-areas:
-            "desc   desc   desc"
-            "qty    unit   dist"
-            "markup markup price"
-            "amount amount action";
-          gap:.5rem;
+          display:block;
           background:rgba(30,30,30,.95);
           border:1px solid rgba(255,69,0,.4);
           border-radius:10px;
@@ -360,14 +364,12 @@
           margin-bottom:.75rem;
         }
         #itemsTable tbody td {
-          display:none; /* hide all by default; shown via named areas below */
+          display:block;
           border:none;
           padding:0;
         }
         /* Description – full width, prominent */
         #itemsTable tbody td.imt-desc {
-          display:block;
-          grid-area:desc;
           padding-bottom:.6rem;
           border-bottom:1px solid rgba(255,69,0,.2);
         }
@@ -380,13 +382,16 @@
           color:#e0e0e0;
           width:100%;
         }
-        /* Fields: qty / unit / dist cost / markup / sell price */
-        #itemsTable tbody td.imt-qty      { display:block; grid-area:qty; }
-        #itemsTable tbody td.imt-unit     { display:block; grid-area:unit; }
-        #itemsTable tbody td.imt-distcost { display:block; grid-area:dist; }
-        #itemsTable tbody td.imt-markup   { display:block; grid-area:markup; }
-        #itemsTable tbody td.imt-price    { display:block; grid-area:price; }
-        #itemsTable tbody td[data-label]::before {
+        /* Field groups (qty/unit/dist, markup/price) and the footer group
+           are separate <td>s, each just a plain block box with a top
+           divider — the grid/flex layout inside them lives on .imt-* divs
+           (see base rules below), not on the <td> itself. */
+        #itemsTable tbody td.imt-group {
+          padding-top:.6rem;
+          margin-top:.6rem;
+          border-top:1px solid rgba(255,69,0,.2);
+        }
+        #itemsTable tbody .imt-field[data-label]::before {
           content: attr(data-label);
           display:block;
           font-size:.72rem;
@@ -396,41 +401,39 @@
           text-transform:uppercase;
           letter-spacing:.04em;
         }
-        #itemsTable tbody td.imt-qty input,
-        #itemsTable tbody td.imt-unit input,
-        #itemsTable tbody td.imt-distcost input,
-        #itemsTable tbody td.imt-markup input,
-        #itemsTable tbody td.imt-price input {
+        #itemsTable tbody .imt-field input {
           font-size:.95rem;
           padding:.45rem .5rem;
           min-height:40px;
         }
-        /* Amount + remove */
-        #itemsTable tbody td.imt-amount {
-          display:block;
-          grid-area:amount;
-          align-self:center;
-          padding-top:.5rem;
-          border-top:1px solid rgba(255,69,0,.2);
+        #itemsTable tbody .imt-amount {
           font-size:1.15rem;
           font-weight:700;
           color:#ff4500;
         }
-        #itemsTable tbody td.imt-action {
-          display:block;
-          grid-area:action;
-          align-self:center;
-          justify-self:end;
-          padding-top:.5rem;
-          border-top:1px solid rgba(255,69,0,.2);
-        }
-        #itemsTable tbody td.imt-action button {
+        #itemsTable tbody .imt-group-footer .remove-item {
           background:#dc3545;
           font-size:.85rem;
           padding:.4rem .8rem;
           min-height:36px;
           margin:0;
         }
+      }
+
+      /* Plain <div> layout used inside the merged qty/price/footer <td>s
+         above — applies at every width (not just mobile) so the grouped
+         desktop cell still shows its fields side by side, matching how
+         separate <td> columns used to look. These are never table
+         elements, so none of the WebKit table+grid bug applies to them. */
+      .imt-group-grid { display:grid; gap:.5rem; width:100%; }
+      .imt-qty-grid   { grid-template-columns:1fr 1fr 1fr; }
+      .imt-price-grid { grid-template-columns:2fr 1fr; }
+      .imt-field input { width:100%; }
+      .imt-footer-grid {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
       }
 
       /* Tablet landscape */
@@ -5524,19 +5527,31 @@
             <input type="text" class="item-desc" ${materialListAttr} autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${esc(item.desc || '')}" placeholder="Material / extra service">
             <div class="material-autocomplete"></div>
           </td>
-          <td class="imt-qty" data-label="Qty">
-            <div class="qty-stepper">
-              <button type="button" class="qty-step-btn qty-minus" tabindex="-1">−</button>
-              <input type="number" class="item-qty" min="0" step="1" value="${item.qty ?? 1}">
-              <button type="button" class="qty-step-btn qty-plus" tabindex="-1">+</button>
+          <td class="imt-group imt-group-qty" colspan="3">
+            <div class="imt-group-grid imt-qty-grid">
+              <div class="imt-field" data-label="Qty">
+                <div class="qty-stepper">
+                  <button type="button" class="qty-step-btn qty-minus" tabindex="-1">−</button>
+                  <input type="number" class="item-qty" min="0" step="1" value="${item.qty ?? 1}">
+                  <button type="button" class="qty-step-btn qty-plus" tabindex="-1">+</button>
+                </div>
+              </div>
+              <div class="imt-field" data-label="Unit"><input type="text" class="item-unit" value="${esc(item.unit || savedMaterial?.unit || 'ea')}"></div>
+              <div class="imt-field" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></div>
             </div>
           </td>
-          <td class="imt-unit" data-label="Unit"><input type="text" class="item-unit" value="${esc(item.unit || savedMaterial?.unit || 'ea')}"></td>
-          <td class="imt-distcost" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
-          <td class="imt-markup" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
-          <td class="imt-price" data-label="Sell price"><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></td>
-          <td class="item-amount imt-amount text-right" data-label="Amount">$0.00</td>
-          <td class="imt-action"><button type="button" class="mini-btn remove-item">Remove</button></td>
+          <td class="imt-group imt-group-price" colspan="2">
+            <div class="imt-group-grid imt-price-grid">
+              <div class="imt-field" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></div>
+              <div class="imt-field" data-label="Sell price"><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></div>
+            </div>
+          </td>
+          <td class="imt-group imt-group-footer" colspan="2">
+            <div class="imt-footer-grid">
+              <div class="imt-field item-amount imt-amount text-right" data-label="Amount">$0.00</div>
+              <button type="button" class="mini-btn remove-item">Remove</button>
+            </div>
+          </td>
         `;
 
         const desc = tr.querySelector('.item-desc');
