@@ -120,7 +120,6 @@
       }
       .iag-toggle-btn.open { color: #e0e0e0; border-color: rgba(255,255,255,.22); }
       .mini-btn {padding:.5rem .8rem;font-size:.9rem;}
-      .items-table td,.items-table th {vertical-align:middle;}
       .items-table input {min-width:90px;}
       .text-right {text-align:right;}
       .selector-row {display:flex;align-items:center;padding:.7rem .8rem;border-bottom:1px solid #444;cursor:pointer;min-height:44px;transition:all .2s;}
@@ -333,47 +332,81 @@
         .tab-btn {padding:0.4rem 0.6rem;font-size:0.75rem;}
       }
 
-      /* ── Invoice items: card layout on mobile ──
-         Root-caused: Safari/WebKit has long-documented bugs specifically
-         around overriding display to grid/flex on native <tr>/<td>
-         elements (table cells can end up mis-boxed, mis-counted, or
-         skipped — see WebKit bug tracker + MDN browser-compat-data #19994).
-         The previous version of this put `display:grid` + `grid-area`
-         directly on the <tr>/<td>, which is exactly that bug pattern —
-         it worked in Chromium (and often in Safari) but was never
-         reliable, which is why the "mush" of the description placeholder
-         overlapping the qty row kept coming back.
-         Fix: <tr> and <td> here NEVER get display:grid or display:flex —
-         only plain display:block, the one override WebKit's table
-         "fixup" reliably respects. All real 2D layout (fields side by
-         side, footer split into amount + button) happens on plain <div>s
-         *inside* each <td> (see .imt-group-grid / .imt-footer-grid below),
-         which have zero table ancestry, so the bug can't reach them.
-         Field <td>s use colspan so the same markup still lines up under
-         the 8 real <th> columns on desktop, where <tr>/<td> are left
-         completely untouched (native table layout — no override, no
-         bug risk). */
+      /* ── Invoice items list ──
+         Two earlier versions of this both still used real <table>/<tr>/<td>
+         elements underneath (first with display:grid + grid-area on <tr>,
+         then with display:block on <tr>/<td> plus colspan). Both looked
+         right in a desktop browser test, but kept showing the description
+         field misplaced on Luke's actual iOS Safari — strong evidence
+         that on his device it's not just grid/flex on a table element
+         that's unreliable, ANY overridden display (including plain block)
+         on native <tr>/<td> can still misbehave, because the browser's
+         internal table layout keeps partially applying underneath.
+         Fix: #itemsTable is no longer a <table> at all — thead/tbody/tr/td
+         are plain <div>s (.items-table-head / .items-table-body /
+         .item-row / .ir-cell). Divs have no table box-generation rules to
+         fight, in any browser, so this bug can't come back regardless of
+         which display value is used. Desktop shows 8 columns via CSS Grid
+         column widths lifted straight from the old <th style="width">
+         hints; mobile switches the SAME row to a 3-column card via
+         grid-template-areas (see the media query below). */
+      .items-table {
+        width:100%;
+        background:rgba(30,30,30,.97);
+        border-radius:12px;
+        overflow:hidden;
+        box-shadow:0 0 22px rgba(255,69,0,.25);
+        margin:1rem 0;
+        border:1px solid rgba(255,69,0,.3);
+      }
+      .items-table-head, .item-row {
+        display:grid;
+        grid-template-columns: minmax(160px,2fr) 90px 90px 140px 110px 140px 140px 90px;
+        align-items:center;
+        gap:.5rem;
+        padding:.65rem .7rem;
+      }
+      .items-table-head {
+        background:linear-gradient(135deg,#c93a00,#ff4500);
+        color:white;
+        font-size:.82rem;
+        letter-spacing:.05em;
+        text-transform:uppercase;
+      }
+      .item-row { border-bottom:1px solid rgba(255,69,0,.2); }
+      .items-table-body .item-row:last-child { border-bottom:none; }
+      .ir-cell input, .ir-cell .qty-stepper { width:100%; }
       @media (max-width:640px) {
-        #itemsTable thead { display:none; }
-        #itemsTable tbody tr {
-          display:block;
+        .items-table-head { display:none; }
+        .item-row {
+          display:grid;
+          grid-template-columns:1fr 1fr 1fr;
+          grid-template-areas:
+            "desc   desc   desc"
+            "qty    unit   dist"
+            "markup markup price"
+            "amount amount action";
+          gap:.5rem;
           background:rgba(30,30,30,.95);
           border:1px solid rgba(255,69,0,.4);
           border-radius:10px;
           padding:.85rem;
-          margin-bottom:.75rem;
+          margin:0 0 .75rem 0;
         }
-        #itemsTable tbody td {
-          display:block;
-          border:none;
-          padding:0;
-        }
+        .ir-desc   { grid-area:desc; }
+        .ir-qty    { grid-area:qty; }
+        .ir-unit   { grid-area:unit; }
+        .ir-dist   { grid-area:dist; }
+        .ir-markup { grid-area:markup; }
+        .ir-price  { grid-area:price; }
+        .ir-amount { grid-area:amount; align-self:center; }
+        .ir-action { grid-area:action; align-self:center; justify-self:end; }
         /* Description – full width, prominent */
-        #itemsTable tbody td.imt-desc {
+        .ir-desc {
           padding-bottom:.6rem;
           border-bottom:1px solid rgba(255,69,0,.2);
         }
-        #itemsTable tbody td.imt-desc input {
+        .ir-desc input {
           font-size:1rem;
           font-weight:700;
           background:transparent;
@@ -382,16 +415,7 @@
           color:#e0e0e0;
           width:100%;
         }
-        /* Field groups (qty/unit/dist, markup/price) and the footer group
-           are separate <td>s, each just a plain block box with a top
-           divider — the grid/flex layout inside them lives on .imt-* divs
-           (see base rules below), not on the <td> itself. */
-        #itemsTable tbody td.imt-group {
-          padding-top:.6rem;
-          margin-top:.6rem;
-          border-top:1px solid rgba(255,69,0,.2);
-        }
-        #itemsTable tbody .imt-field[data-label]::before {
+        .ir-cell[data-label]::before {
           content: attr(data-label);
           display:block;
           font-size:.72rem;
@@ -401,39 +425,30 @@
           text-transform:uppercase;
           letter-spacing:.04em;
         }
-        #itemsTable tbody .imt-field input {
+        .ir-qty input, .ir-unit input, .ir-dist input,
+        .ir-markup input, .ir-price input {
           font-size:.95rem;
           padding:.45rem .5rem;
           min-height:40px;
         }
-        #itemsTable tbody .imt-amount {
+        .ir-amount {
+          padding-top:.5rem;
+          border-top:1px solid rgba(255,69,0,.2);
           font-size:1.15rem;
           font-weight:700;
           color:#ff4500;
         }
-        #itemsTable tbody .imt-group-footer .remove-item {
+        .ir-action {
+          padding-top:.5rem;
+          border-top:1px solid rgba(255,69,0,.2);
+        }
+        .ir-action .remove-item {
           background:#dc3545;
           font-size:.85rem;
           padding:.4rem .8rem;
           min-height:36px;
           margin:0;
         }
-      }
-
-      /* Plain <div> layout used inside the merged qty/price/footer <td>s
-         above — applies at every width (not just mobile) so the grouped
-         desktop cell still shows its fields side by side, matching how
-         separate <td> columns used to look. These are never table
-         elements, so none of the WebKit table+grid bug applies to them. */
-      .imt-group-grid { display:grid; gap:.5rem; width:100%; }
-      .imt-qty-grid   { grid-template-columns:1fr 1fr 1fr; }
-      .imt-price-grid { grid-template-columns:2fr 1fr; }
-      .imt-field input { width:100%; }
-      .imt-footer-grid {
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:.5rem;
       }
 
       /* Tablet landscape */
@@ -1548,7 +1563,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 4 · 2026-07-29</div>
+    <div id="appBuildTag">Build 5 · 2026-08-03</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -1969,21 +1984,19 @@
           </small>
         </label>
 
-        <table class="items-table" id="itemsTable">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th style="width:90px;">Qty</th>
-              <th style="width:90px;">Unit</th>
-              <th style="width:140px;">Distributor Cost</th>
-              <th style="width:110px;">Markup %</th>
-              <th style="width:140px;">Customer Price</th>
-              <th style="width:140px;">Amount</th>
-              <th style="width:90px;">Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="items-table" id="itemsTable">
+          <div class="items-table-head">
+            <div class="ith-col">Description</div>
+            <div class="ith-col">Qty</div>
+            <div class="ith-col">Unit</div>
+            <div class="ith-col">Distributor Cost</div>
+            <div class="ith-col">Markup %</div>
+            <div class="ith-col">Customer Price</div>
+            <div class="ith-col">Amount</div>
+            <div class="ith-col">Action</div>
+          </div>
+          <div class="items-table-body" id="itemsTableBody"></div>
+        </div>
         <datalist id="materialSuggestions"></datalist>
         <small class="muted-note">
           Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly. Use <b>Saved Materials</b> to remove any bad dropdown entries you no longer want.
@@ -2804,7 +2817,7 @@
       // written to the catalog just because focus briefly left the field.
       function commitNewMaterialsFromInvoice() {
         const skipTypes = new Set(['regular-labor', 'overtime-labor', 'service-charge']);
-        document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+        document.querySelectorAll('#itemsTableBody .item-row').forEach(row => {
           const type = row.dataset.type || '';
           if (skipTypes.has(type) || type.startsWith('labor-')) return;
           const descEl = row.querySelector('.item-desc');
@@ -2944,7 +2957,7 @@
 
       function collectCurrentInvoiceMaterialUsage() {
         const usage = {};
-        document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+        document.querySelectorAll('#itemsTableBody .item-row').forEach(row => {
           if (!isMaterialInvoiceRow(row)) return;
           const descEl = row.querySelector('.item-desc');
           const qtyEl  = row.querySelector('.item-qty');
@@ -3649,7 +3662,7 @@
           currentInvoiceInventoryLocked = !!s._invLocked;
 
           if (Array.isArray(s.items) && s.items.length) {
-            const tbody = document.querySelector('#itemsTable tbody');
+            const tbody = document.querySelector('#itemsTableBody');
             tbody.innerHTML = '';
             // Only filter out overtime-service-charge (auto-managed); restore
             // regular-labor and overtime-labor so a PWA reload after boss copy
@@ -5520,38 +5533,27 @@
         const defaultDistributorCost = item.distributorCost ?? savedMaterial?.distributorCost ?? 0;
         const fallbackCustomerPrice = item.customerPrice ?? item.price ?? savedMaterial?.customerPrice ?? customerPriceFromCost(defaultDistributorCost, defaultMarkup);
 
-        const tr = document.createElement('tr');
+        const tr = document.createElement('div');
+        tr.className = 'item-row';
         const materialListAttr = USE_CUSTOM_MATERIAL_DROPDOWN ? '' : 'list="materialSuggestions"';
         tr.innerHTML = `
-          <td class="desc-cell imt-desc">
+          <div class="ir-cell ir-desc desc-cell">
             <input type="text" class="item-desc" ${materialListAttr} autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${esc(item.desc || '')}" placeholder="Material / extra service">
             <div class="material-autocomplete"></div>
-          </td>
-          <td class="imt-group imt-group-qty" colspan="3">
-            <div class="imt-group-grid imt-qty-grid">
-              <div class="imt-field" data-label="Qty">
-                <div class="qty-stepper">
-                  <button type="button" class="qty-step-btn qty-minus" tabindex="-1">−</button>
-                  <input type="number" class="item-qty" min="0" step="1" value="${item.qty ?? 1}">
-                  <button type="button" class="qty-step-btn qty-plus" tabindex="-1">+</button>
-                </div>
-              </div>
-              <div class="imt-field" data-label="Unit"><input type="text" class="item-unit" value="${esc(item.unit || savedMaterial?.unit || 'ea')}"></div>
-              <div class="imt-field" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></div>
+          </div>
+          <div class="ir-cell ir-qty" data-label="Qty">
+            <div class="qty-stepper">
+              <button type="button" class="qty-step-btn qty-minus" tabindex="-1">−</button>
+              <input type="number" class="item-qty" min="0" step="1" value="${item.qty ?? 1}">
+              <button type="button" class="qty-step-btn qty-plus" tabindex="-1">+</button>
             </div>
-          </td>
-          <td class="imt-group imt-group-price" colspan="2">
-            <div class="imt-group-grid imt-price-grid">
-              <div class="imt-field" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></div>
-              <div class="imt-field" data-label="Sell price"><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></div>
-            </div>
-          </td>
-          <td class="imt-group imt-group-footer" colspan="2">
-            <div class="imt-footer-grid">
-              <div class="imt-field item-amount imt-amount text-right" data-label="Amount">$0.00</div>
-              <button type="button" class="mini-btn remove-item">Remove</button>
-            </div>
-          </td>
+          </div>
+          <div class="ir-cell ir-unit" data-label="Unit"><input type="text" class="item-unit" value="${esc(item.unit || savedMaterial?.unit || 'ea')}"></div>
+          <div class="ir-cell ir-dist" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></div>
+          <div class="ir-cell ir-markup" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></div>
+          <div class="ir-cell ir-price" data-label="Sell price"><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></div>
+          <div class="ir-cell ir-amount item-amount text-right" data-label="Amount">$0.00</div>
+          <div class="ir-cell ir-action"><button type="button" class="mini-btn remove-item">Remove</button></div>
         `;
 
         const desc = tr.querySelector('.item-desc');
@@ -5730,7 +5732,7 @@
         tr.querySelector('.remove-item').onclick = () => { tr.remove(); updateInvoiceRunningTotal(); };
         recalc();
 
-        document.querySelector('#itemsTable tbody').appendChild(tr);
+        document.querySelector('#itemsTableBody').appendChild(tr);
 
         return tr;
       }
@@ -5746,17 +5748,17 @@
       }
 
       function ensureServiceChargeRow() {
-        let row = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+        let row = document.querySelector('#itemsTableBody .item-row[data-type="service-charge"]');
         if (!row) {
           createItemRow({ desc: 'Service Charge', qty: 1, unit: 'ea', distributorCost: 0, markup: 0, customerPrice: getDefaultServiceCharge() });
-          row = document.querySelector('#itemsTable tbody tr:last-child');
+          row = document.querySelector('#itemsTableBody .item-row:last-child');
           row.dataset.type = 'service-charge';
         }
         return row;
       }
 
       function ensureRegularLaborRow() {
-        let regularRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+        let regularRow = document.querySelector('#itemsTableBody .item-row[data-type="regular-labor"]');
         if (!regularRow) {
           createItemRow({
             desc: 'Labor (Regular Hours)',
@@ -5766,7 +5768,7 @@
             markup: 0,
             customerPrice: document.getElementById('hourlyRate').value || 100
           });
-          regularRow = document.querySelector('#itemsTable tbody tr:last-child');
+          regularRow = document.querySelector('#itemsTableBody .item-row:last-child');
           regularRow.dataset.type = 'regular-labor';
           regularRow.querySelector('.remove-item').style.display = 'none';
         }
@@ -5774,7 +5776,7 @@
       }
 
       function ensureOvertimeLaborRow() {
-        let overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+        let overtimeRow = document.querySelector('#itemsTableBody .item-row[data-type="overtime-labor"]');
         if (!overtimeRow) {
           createItemRow({
             desc: 'Labor (Overtime Hours)',
@@ -5784,7 +5786,7 @@
             markup: 0,
             customerPrice: document.getElementById('overtimeRate').value || 175
           });
-          overtimeRow = document.querySelector('#itemsTable tbody tr:last-child');
+          overtimeRow = document.querySelector('#itemsTableBody .item-row:last-child');
           overtimeRow.dataset.type = 'overtime-labor';
           overtimeRow.querySelector('.remove-item').style.display = 'none';
         }
@@ -5792,7 +5794,7 @@
       }
 
       function removeOvertimeLaborRowIfExists() {
-        const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+        const overtimeRow = document.querySelector('#itemsTableBody .item-row[data-type="overtime-labor"]');
         if (overtimeRow) overtimeRow.remove();
       }
 
@@ -5860,7 +5862,7 @@
       }
 
       function getLaborRows() {
-        return [...document.querySelectorAll('#itemsTable tbody tr')].filter(row => {
+        return [...document.querySelectorAll('#itemsTableBody .item-row')].filter(row => {
           const t = row.dataset.type || '';
           return t.startsWith('labor-') || t === 'regular-labor' || t === 'overtime-labor';
 
@@ -5895,7 +5897,7 @@
         }
 
         // Auto-switch service charge: $175 if any overtime, $110 (default) for regular calls
-        const scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+        const scRow = document.querySelector('#itemsTableBody .item-row[data-type="service-charge"]');
         if (scRow) {
           const scRate = totalOvertime > 0 ? 175 : getDefaultServiceCharge();
           scRow.querySelector('.item-customer-price').value = formatMoney(scRate);
@@ -5906,7 +5908,7 @@
       function updateInvoiceRunningTotal() {
         const hstRate = parseFloat(document.getElementById('hstRate')?.value || '0.13') || 0;
         let subtotal = 0;
-        document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+        document.querySelectorAll('#itemsTableBody .item-row').forEach(row => {
           const qty = parseFloat(row.querySelector('.item-qty')?.value || '0') || 0;
           const price = parseFloat(row.querySelector('.item-customer-price')?.value || '0') || 0;
           subtotal += qty * price;
@@ -5934,7 +5936,7 @@
           markup: 0,
           customerPrice: kind === 'regular' ? (document.getElementById('hourlyRate').value || 100) : (document.getElementById('overtimeRate').value || 150)
         });
-        const row = document.querySelector('#itemsTable tbody tr:last-child');
+        const row = document.querySelector('#itemsTableBody .item-row:last-child');
         row.dataset.type = `labor-${kind}-${entry.id}`;
         row.dataset.laborKind = kind;
         row.dataset.entryId = String(entry.id);
@@ -6074,7 +6076,7 @@
         renderInvoiceEntrySelector(mergedIds);
 
         // Restore non-labor items from the saved draft
-        const tbody = document.querySelector('#itemsTable tbody');
+        const tbody = document.querySelector('#itemsTableBody');
         tbody.innerHTML = '';
         (existingDraft.items || []).forEach(item => {
           const t = item.type || '';
@@ -6134,7 +6136,7 @@
         }
 
         // Auto-switch service charge based on overtime
-        const _scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+        const _scRow = document.querySelector('#itemsTableBody .item-row[data-type="service-charge"]');
         if (_scRow) {
           const _scRate = totalOvertime > 0 ? 175 : getDefaultServiceCharge();
           _scRow.querySelector('.item-customer-price').value = formatMoney(_scRate);
@@ -6637,7 +6639,7 @@
         }
 
         // Auto-switch service charge
-        const scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+        const scRow = document.querySelector('#itemsTableBody .item-row[data-type="service-charge"]');
         if (scRow) {
           const scRate = totalOvertime > 0 ? 175 : getDefaultServiceCharge();
           scRow.querySelector('.item-customer-price').value = formatMoney(scRate);
@@ -6674,7 +6676,7 @@
         const balWrap = document.getElementById('rtBalanceWrap');
         if (balWrap) balWrap.style.display = 'none';
 
-        const tbody = document.querySelector('#itemsTable tbody');
+        const tbody = document.querySelector('#itemsTableBody');
         tbody.innerHTML = '';
 
         ensureServiceChargeRow();
@@ -6683,7 +6685,7 @@
       }
 
       function collectInvoiceItems() {
-        return [...document.querySelectorAll('#itemsTable tbody tr')].map(row => ({
+        return [...document.querySelectorAll('#itemsTableBody .item-row')].map(row => ({
           desc: row.querySelector('.item-desc').value.trim(),
           qty: +row.querySelector('.item-qty').value || 0,
           unit: row.querySelector('.item-unit').value.trim() || 'ea',
@@ -6770,8 +6772,8 @@
         rememberCurrentLocationProfile(true, getSingleFilteredAddress(getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id))));
 
         // Compute hours from the current table (already built by populateInvoiceFromDraftAppend or populateLaborRowsFromEntries)
-        const regularRow  = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
-        const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+        const regularRow  = document.querySelector('#itemsTableBody .item-row[data-type="regular-labor"]');
+        const overtimeRow = document.querySelector('#itemsTableBody .item-row[data-type="overtime-labor"]');
         const savedRegularHours  = regularRow  ? (+regularRow.querySelector('.item-qty').value  || 0) : 0;
         const savedOvertimeHours = overtimeRow ? (+overtimeRow.querySelector('.item-qty').value || 0) : 0;
 
@@ -6891,7 +6893,7 @@
 
         renderInvoiceEntrySelector(inv.linkedEntryIds || []);
 
-        const tbody = document.querySelector('#itemsTable tbody');
+        const tbody = document.querySelector('#itemsTableBody');
         tbody.innerHTML = '';
         (inv.items || []).forEach(item => {
           if ((item.type || '').startsWith('labor-') || item.type === 'regular-labor' || item.type === 'overtime-labor') return; // rebuilt fresh below
@@ -7469,7 +7471,7 @@
           const val = parseFloat(document.getElementById('defaultServiceCharge').value) || 100;
           setDefaultServiceCharge(val);
           // Update the service charge row on the current invoice immediately
-          const scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+          const scRow = document.querySelector('#itemsTableBody .item-row[data-type="service-charge"]');
           if (scRow) {
             scRow.querySelector('.item-customer-price').value = formatMoney(val);
             scRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
@@ -7609,7 +7611,7 @@
         document.getElementById('clientEmail').value = '';
         document.getElementById('clientAddress').value = '';
         document.getElementById('laborDescription').value = '';
-        document.querySelector('#itemsTable tbody').innerHTML = '';
+        document.querySelector('#itemsTableBody').innerHTML = '';
         ensureServiceChargeRow();
         ensureRegularLaborRow();
         renderInvoiceEntrySelector([]);
@@ -7638,7 +7640,7 @@
       });
 
       document.getElementById('overtimeRate').addEventListener('input', () => {
-        const otRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+        const otRow = document.querySelector('#itemsTableBody .item-row[data-type="overtime-labor"]');
         if (otRow) {
           otRow.querySelector('.item-customer-price').value = formatMoney(document.getElementById('overtimeRate').value || 0);
           otRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
@@ -7725,7 +7727,7 @@
 
 
       function collectInvoiceLines(mode = 'customer') {
-        const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
+        const lineRows = [...document.querySelectorAll('#itemsTableBody .item-row')];
         const rawLines = lineRows
           .map(row => {
             const quantity = +row.querySelector('.item-qty').value || 0;
@@ -7834,8 +7836,8 @@
           const invoiceIdForSave = document.getElementById('invoiceId').value.trim();
           if (invoiceIdForSave) {
             const selectedIds = getSelectedInvoiceEntryIds();
-            const rRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
-            const oRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+            const rRow = document.querySelector('#itemsTableBody .item-row[data-type="regular-labor"]');
+            const oRow = document.querySelector('#itemsTableBody .item-row[data-type="overtime-labor"]');
             const pdfLinkedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
             invoices[invoiceIdForSave] = {
               ...(invoices[invoiceIdForSave] || {}),
@@ -9981,7 +9983,7 @@
         // ── Save Invoice Materials as Template ──
         document.getElementById('saveAsTemplate').addEventListener('click', () => {
           commitNewMaterialsFromInvoice();
-          const allItems = [...document.querySelectorAll('#itemsTable tbody tr')];
+          const allItems = [...document.querySelectorAll('#itemsTableBody .item-row')];
           const matItems = allItems
             .filter(row => {
               const t = row.dataset.type || '';
@@ -11139,7 +11141,7 @@
       function sendToInvoice(){
         const groupedItems = getGroupedItems();
         if (!groupedItems.length) return alert('No Black Iron items to send.');
-        const tbody = document.querySelector('#itemsTable tbody');
+        const tbody = document.querySelector('#itemsTableBody');
         groupedItems.forEach(item => {
           const row = createItemRow({ desc: buildInvoiceDescription(item), qty: item.quantity, unit: item.fittingType === 'Pipe' ? 'ft' : 'ea' });
           tbody.appendChild(row);
