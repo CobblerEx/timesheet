@@ -244,26 +244,6 @@
         transition:transform .25s ease, opacity .25s ease, visibility 0s linear .25s;
       }
 
-      #priceAlertBanner {
-        position:fixed;
-        top:0;left:0;right:0;
-        z-index:600;
-        background:#8b3a00;
-        color:#fff;
-        padding:.65rem 1rem;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        gap:.75rem;
-        flex-wrap:wrap;
-        font-size:.9rem;
-        box-shadow:0 2px 10px rgba(0,0,0,.4);
-        transform:translateY(-110%);
-        transition:transform .3s ease;
-      }
-      #priceAlertBanner.show { transform:translateY(0); }
-      #priceAlertBanner b { color:#ffcc88; }
-      #priceAlertBanner button { margin:0; padding:.35rem .8rem; font-size:.85rem; min-height:34px; }
       .sticky-action-bar .sab-label {
         font-size:.8rem;
         color:rgba(255,255,255,.45);
@@ -540,6 +520,8 @@
       .material-option {padding:.6rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.18);min-height:44px;display:flex;align-items:center;transition:all .2s;}
       .material-option:last-child {border-bottom:none;}
       .material-option:active,.material-option.active {background:rgba(255,69,0,.16);}
+      .material-price-warn {display:none;font-size:.72rem;color:#ff9f9f;margin-top:.35rem;font-weight:600;line-height:1.3;}
+      .material-price-warn.show {display:block;}
       .invoice-tools-toggle{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-top:1rem;padding:.85rem 1rem;border:1px solid rgba(255,69,0,.35);border-radius:12px;background:rgba(255,255,255,.03);} 
       .invoice-tools-panel{display:none;gap:.75rem;flex-wrap:wrap;margin-top:.75rem;padding:.9rem 1rem;border:1px solid rgba(255,69,0,.2);border-radius:12px;background:rgba(255,255,255,.025);} 
       .invoice-tools-panel.show{display:flex;} 
@@ -1563,7 +1545,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 5 · 2026-08-03</div>
+    <div id="appBuildTag">Build 6 · 2026-08-08</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -2891,32 +2873,21 @@
         return Math.floor(diff / (1000 * 60 * 60 * 24));
       }
 
-      function checkPriceAlerts() {
-        const overdue = Object.values(materialCatalog).filter(item => {
-          if (!item.priceAlertEnabled && item.priceAlertEnabled !== undefined) return false;
-          const days = daysSince(item.priceLastUpdated);
-          return days === null || days >= 30;
-        });
-        if (!overdue.length) return;
+      // Materials with a price older than this (or never priced) are flagged as
+      // stale. Shared by the per-row invoice warning and the Saved Materials
+      // list's overdue styling so both agree on what "stale" means.
+      const PRICE_ALERT_DAYS = 60;
 
-        const banner = document.getElementById('priceAlertBanner');
-        const msg    = document.getElementById('priceAlertMsg');
-        const goTo   = document.getElementById('priceAlertGoTo');
-        const dismiss= document.getElementById('priceAlertDismiss');
-        if (!banner || !msg) return;
-
-        const count = overdue.length;
-        msg.innerHTML = `<b>Price check:</b> ${count} material${count > 1 ? 's have' : ' has'} not been updated in 30+ days.`;
-
-        banner.classList.add('show');
-
-        goTo.onclick = () => {
-          banner.classList.remove('show');
-          // Switch to invoice tab and open saved materials modal
-          setActiveTab('invoiceTab');
-          setTimeout(() => openSavedMaterialsModal(), 200);
-        };
-        dismiss.onclick = () => banner.classList.remove('show');
+      // Returns the warning text for a saved material, or '' if no warning
+      // applies (alerts disabled for this item, or price is within the window).
+      // Used at the moment a material is selected on an invoice row — not on
+      // app load — so it only surfaces for parts actually being billed.
+      function materialPriceWarningText(item) {
+        if (!item || item.priceAlertEnabled === false) return '';
+        const days = daysSince(item.priceLastUpdated);
+        if (days === null) return '⚠️ Price never set — confirm before invoicing';
+        if (days < PRICE_ALERT_DAYS) return '';
+        return `⚠️ Price last updated ${days}d ago — confirm before invoicing`;
       }
 
       // ════════════════════════════════════════════════════════════════════
@@ -3208,7 +3179,7 @@
           const key = normalizeMaterialKey(item.desc);
           const days = daysSince(item.priceLastUpdated);
           const alertOn = item.priceAlertEnabled !== false;
-          const overdue = alertOn && (days === null || days >= 30);
+          const overdue = alertOn && (days === null || days >= PRICE_ALERT_DAYS);
           const daysLabel = days === null ? 'Never updated' : days === 0 ? 'Updated today' : `Updated ${days}d ago`;
           const daysColor = overdue ? '#ff9f9f' : days !== null && days < 14 ? '#7CFF9B' : '#ffd86a';
 
@@ -5540,6 +5511,7 @@
           <div class="ir-cell ir-desc desc-cell">
             <input type="text" class="item-desc" ${materialListAttr} autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${esc(item.desc || '')}" placeholder="Material / extra service">
             <div class="material-autocomplete"></div>
+            <div class="material-price-warn"></div>
           </div>
           <div class="ir-cell ir-qty" data-label="Qty">
             <div class="qty-stepper">
@@ -5564,6 +5536,17 @@
         const customerPrice = tr.querySelector('.item-customer-price');
         const amountCell = tr.querySelector('.item-amount');
         const autocompleteBox = tr.querySelector('.material-autocomplete');
+        const priceWarnEl = tr.querySelector('.material-price-warn');
+
+        // Shows/clears the stale-price note for this row. Only called at the
+        // moment a material is actually picked (dropdown tap, datalist pick,
+        // or a confirmed exact-match on blur) — never on every keystroke —
+        // so it reflects a deliberate selection, per Build 6.
+        function updatePriceWarning(saved) {
+          const text = materialPriceWarningText(saved);
+          priceWarnEl.textContent = text;
+          priceWarnEl.classList.toggle('show', !!text);
+        }
 
         function getMaterialMatches(term) {
           const key = normalizeMaterialKey(term);
@@ -5593,6 +5576,7 @@
           distributorCost.value = formatMoney(saved.distributorCost ?? 0);
           markup.value = formatMoney(saved.markup ?? getDefaultMarkupPercent());
           customerPrice.value = formatMoney(saved.customerPrice ?? customerPriceFromCost(saved.distributorCost, saved.markup));
+          updatePriceWarning(saved);
           recalc();
           saveCurrentMaterial();
         }
@@ -5620,6 +5604,10 @@
 
         function syncFromSaved(useBestMatch = false) {
           const saved = useBestMatch ? findBestMaterialMatch(desc.value) : getSavedMaterial(desc.value);
+          // Only the confirmed exact-match path (change event — native datalist
+          // pick or a finished exact-typed name) updates the warning; the live
+          // best-match path fires on every keystroke and would just flicker.
+          if (!useBestMatch) updatePriceWarning(saved);
           if (!saved) return;
           if (!unit.value.trim() || unit.value === 'ea') unit.value = saved.unit || 'ea';
           distributorCost.value = formatMoney(saved.distributorCost ?? 0);
@@ -5652,6 +5640,7 @@
         }
 
         desc.addEventListener('input', () => {
+          updatePriceWarning(null);
           syncFromSaved(true);
           if (USE_CUSTOM_MATERIAL_DROPDOWN) showMaterialDropdown();
         });
@@ -10028,8 +10017,6 @@
       populateInvoiceFromEntries();
       updateInvoiceSummary();
       refreshInvoiceDraftList();
-      // Check for overdue price alerts after a brief delay
-      setTimeout(checkPriceAlerts, 1200);
       // Check for low-stock parts after a brief delay
       setTimeout(checkLowStockAlerts, 1300);
 
@@ -11483,13 +11470,6 @@
       <button type="button" id="biAddItemSticky">+ Add Item</button>
       <button type="button" id="biSendInvoiceSticky" style="background:#28a745;">Send All To Invoice</button>
     </div>
-    <!-- Price alert banner -->
-    <div id="priceAlertBanner">
-      <span id="priceAlertMsg"></span>
-      <button type="button" id="priceAlertGoTo" class="mini-btn" style="background:#ff4500;">Go To Saved Materials</button>
-      <button type="button" id="priceAlertDismiss" class="mini-btn" style="background:#555;">Dismiss</button>
-    </div>
-
     <!-- Low stock banner -->
     <div id="lowStockBanner">
       <span id="lowStockMsg"></span>
