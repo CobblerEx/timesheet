@@ -438,6 +438,14 @@
         #invoiceSummary .summary-grid {grid-template-columns:repeat(2,1fr);}
       }
 
+      /* iOS status bar / notch clearance. viewport-fit=cover + a
+         black-translucent status bar (see <meta> tags in <head>) render page
+         content edge-to-edge, so without this the first row on screen (the
+         nav icon buttons) sits partly behind the status bar. Longhand
+         padding-top wins over the `padding` shorthand rules above at every
+         breakpoint because it's declared last in the cascade. */
+      body { padding-top: calc(env(safe-area-inset-top) + 1rem); }
+
       .tabs {display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:1rem 0 1.25rem 0;overflow-x:auto;padding-bottom:0.5rem;background:rgba(0,0,0,.2);border-radius:12px;padding:.5rem;}
       .tab-btn {background:transparent;border:1px solid rgba(255,69,0,.3);color:#aaa;padding:.55rem 1rem;border-radius:8px;cursor:pointer;font-size:.92rem;white-space:nowrap;min-height:44px;display:flex;align-items:center;gap:.4rem;transition:all .2s;touch-action:manipulation;font-weight:500;}
       .tab-btn:hover {border-color:#ff4500;color:#ff4500;}
@@ -735,7 +743,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1.1rem 1rem .9rem;
+        padding: calc(env(safe-area-inset-top) + 1.1rem) 1rem .9rem;
         border-bottom: 1px solid rgba(255,255,255,.07);
       }
       .settings-header h3 { margin: 0; color: #fff; font-size: 1.05rem; font-weight: 600; }
@@ -1437,7 +1445,7 @@
       .photo-del-btn:hover { background:#dc3545; color:#fff; }
       .photo-lightbox { position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:3000; display:flex; align-items:center; justify-content:center; padding:1rem; }
       .photo-lightbox img { max-width:95vw; max-height:90vh; border-radius:8px; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,.7); }
-      .photo-lightbox-close { position:fixed; top:1rem; right:1.25rem; color:#fff; font-size:1.8rem; cursor:pointer; z-index:3001; background:rgba(0,0,0,.5); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:none; min-height:auto; margin:0; }
+      .photo-lightbox-close { position:fixed; top:calc(env(safe-area-inset-top) + 1rem); right:1.25rem; color:#fff; font-size:1.8rem; cursor:pointer; z-index:3001; background:rgba(0,0,0,.5); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:none; min-height:auto; margin:0; }
       #jobPhotosGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; margin-top:.85rem; }
       @media (max-width:480px) { #jobPhotosGrid { grid-template-columns:repeat(2,1fr); } }
 
@@ -1545,7 +1553,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 6 · 2026-08-08</div>
+    <div id="appBuildTag">Build 7 · 2026-08-08</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
