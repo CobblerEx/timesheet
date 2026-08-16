@@ -696,6 +696,20 @@
       .bi-chip {display:inline-block;padding:.35rem .7rem;border-radius:999px;background:rgba(255,69,0,.12);border:1px solid rgba(255,69,0,.35);}
       .bi-hidden {display:none !important;}
       .bi-voice-box {margin-top:.75rem;padding:.75rem;border-radius:8px;background:#222;border:1px solid rgba(255,69,0,.25);display:none;}
+      .bi-gascap-results {margin-top:1rem;}
+      .bi-gascap-badge {padding:.75rem 1rem;border-radius:8px;margin-bottom:.85rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;}
+      .bi-gascap-badge.pass {background:rgba(40,167,69,.18);border:1px solid #28a745;color:#8ef0a6;}
+      .bi-gascap-badge.fail {background:rgba(220,53,69,.18);border:1px solid #dc3545;color:#ff9aa4;}
+      .bi-gascap-note {font-size:.85rem;opacity:.85;margin-bottom:.75rem;}
+      .bi-gascap-table-wrap {overflow-x:auto;-webkit-overflow-scrolling:touch;}
+      .bi-gascap-table {width:100%;border-collapse:collapse;font-size:.92rem;min-width:360px;}
+      .bi-gascap-table th, .bi-gascap-table td {padding:.5rem .6rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap;}
+      .bi-gascap-table th {opacity:.8;font-weight:600;}
+      .bi-gascap-table tr.gascap-pass td {color:#8ef0a6;}
+      .bi-gascap-table tr.gascap-fail td {opacity:.5;}
+      .bi-gascap-table tr.gascap-recommended {background:rgba(255,69,0,.15);}
+      .bi-gascap-table tr.gascap-selected td {font-weight:700;text-shadow:0 0 8px rgba(255,177,132,.5);}
+      .bi-gascap-table td.gascap-status {font-weight:700;}
 
       /* ── Hamburger / settings menu ── */
       #hamburgerBtn {
@@ -1556,7 +1570,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 8 · 2026-08-08</div>
+    <div id="appBuildTag">Build 10 · 2026-08-16</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -2377,6 +2391,46 @@
           </div>
           <small class="bi-muted">Cut length = face-to-face length minus both fitting takeouts. Adjust the takeout value to match the fittings you are using.</small>
           </div><!-- /biCutHelperBody -->
+        </div>
+
+        <div class="bi-wrap" style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,.03);">
+          <div class="bi-section-header" onclick="biToggleSection('biGasCapBody',this)" style="margin-bottom:0;">
+            <h3 style="margin-top:0;">Gas Pipe Capacity Checker</h3>
+            <button type="button" class="bi-collapse-btn collapsed" aria-label="Toggle section">&#8963;</button>
+          </div>
+          <div id="biGasCapBody" class="bi-section-body collapsed">
+          <div class="bi-grid">
+            <label>Material:
+              <select id="biGasCapMaterial">
+                <option value="blackIron">Black Iron Pipe</option>
+                <option value="copper">Copper Tubing</option>
+              </select>
+            </label>
+            <label>Straight Pipe Length (ft):
+              <input type="number" id="biGasCapLength" min="1" step="1" inputmode="numeric" placeholder="e.g. 45" class="select-on-focus" style="font-size:16px;">
+            </label>
+            <label>Appliance Load (BTU/hr):
+              <input type="number" id="biGasCapLoad" min="0" step="1000" inputmode="numeric" placeholder="e.g. 150000" class="select-on-focus" style="font-size:16px;">
+            </label>
+            <label>Gas Heating Value (BTU/cu ft):
+              <input type="number" id="biGasCapBtuPerCf" min="1" step="10" inputmode="numeric" value="1000" class="select-on-focus" style="font-size:16px;">
+            </label>
+            <label>45&deg; Elbows (qty):
+              <input type="number" id="biGasCapElbow45" min="0" step="1" inputmode="numeric" value="0" class="select-on-focus" style="font-size:16px;">
+            </label>
+            <label>90&deg; Elbows (qty):
+              <input type="number" id="biGasCapElbow90" min="0" step="1" inputmode="numeric" value="0" class="select-on-focus" style="font-size:16px;">
+            </label>
+            <label>Tees (qty):
+              <input type="number" id="biGasCapTee" min="0" step="1" inputmode="numeric" value="0" class="select-on-focus" style="font-size:16px;">
+            </label>
+          </div>
+          <div class="bi-actions" style="margin-top:.75rem;">
+            <button type="button" id="biGasCapCheck">Check Capacity</button>
+          </div>
+          <div id="biGasCapResults" class="bi-gascap-results"></div>
+          <small class="bi-muted">Based on CSA B149.1 Table A.2a (Schedule 40 black iron pipe) and Table A.9a (Type L copper tubing) at 0.5" w.c. pressure drop, 0.60 specific gravity gas. Total equivalent length = straight pipe length + fitting equivalent lengths (threaded black iron fittings, 3/8"&ndash;1-1/4" only &mdash; larger sizes are flagged, not guessed). If a size's total length falls between table rows, the next longer tabulated length is used automatically &mdash; standard code practice, and always conservative. Heating value defaults to 1,000 BTU/cu ft; adjust to match your local utility's published value if it differs.</small>
+          </div><!-- /biGasCapBody -->
         </div>
 
         <div class="bi-chip-row">
@@ -10514,6 +10568,60 @@
         { label: 'Gas Copper & Half Length', fittings: ['Gas Copper', '½ Length Black Iron'] },
       ];
       const FITTINGS = FITTING_GROUPS.flatMap(g => g.fittings);
+
+      // Gas pipe capacity tables — CSA B149.1 Table A.2a (Sch. 40 black iron pipe) and
+      // Table A.9a (Type L copper tubing). Capacity is cu ft/hr of gas, 0.5" w.c. pressure
+      // drop, 0.60 specific gravity. Values transcribed from Gas_Capacity_Tables.xlsx.
+      const GAS_CAPACITY_TABLES = {
+        blackIron: {
+          label: 'Black Iron Pipe',
+          tableRef: 'CSA B149.1 Table A.2a',
+          lengths: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300, 350, 400, 450, 500, 600],
+          sizes: ['1/2"', '3/4"', '1"', '1-1/4"', '1-1/2"', '2"', '2-1/2"', '3"', '4"'],
+          capacity: {
+            '1/2"':   [227, 156, 125, 107, 95, 86, 79, 74, 69, 65, 58, 52, 48, 45, 40, 36, 33, 31, 29, 27, 25],
+            '3/4"':   [474, 326, 262, 224, 199, 180, 166, 154, 145, 137, 121, 110, 101, 94, 83, 75, 69, 64, 61, 57, 52],
+            '1"':     [894, 614, 493, 422, 374, 339, 312, 290, 272, 257, 228, 207, 190, 177, 157, 142, 131, 121, 114, 108, 98],
+            '1-1/4"': [1835, 1261, 1013, 867, 768, 696, 640, 596, 559, 528, 468, 424, 390, 363, 322, 291, 268, 249, 234, 221, 200],
+            '1-1/2"': [2749, 1890, 1517, 1299, 1151, 1043, 959, 893, 837, 791, 701, 635, 584, 544, 482, 437, 402, 374, 351, 331, 300],
+            '2"':     [5295, 3639, 2922, 2501, 2217, 2008, 1848, 1719, 1613, 1524, 1350, 1223, 1126, 1047, 928, 841, 774, 720, 675, 638, 578],
+            '2-1/2"': [8439, 5800, 4658, 3986, 3533, 3201, 2945, 2740, 2571, 2428, 2152, 1950, 1794, 1669, 1479, 1340, 1233, 1147, 1076, 1017, 921],
+            '3"':     [14919, 10253, 8234, 7047, 6246, 5659, 5206, 4843, 4544, 4293, 3805, 3447, 3171, 2950, 2615, 2369, 2180, 2028, 1903, 1797, 1628],
+            '4"':     [30429, 20914, 16795, 14374, 12739, 11543, 10619, 9879, 9269, 8756, 7760, 7031, 6469, 6018, 5333, 4832, 4446, 4136, 3881, 3666, 3321],
+          }
+        },
+        copper: {
+          label: 'Copper Tubing',
+          tableRef: 'CSA B149.1 Table A.9a',
+          lengths: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300, 350, 400, 450, 500, 600],
+          sizes: ['3/8"', '1/2"', '5/8"', '3/4"', '7/8"', '1-1/8"', '1-3/8"'],
+          capacity: {
+            '3/8"':   [35, 24, 19, 17, 15, 13, 12, 11, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 4, 3],
+            '1/2"':   [72, 50, 40, 34, 30, 27, 25, 23, 22, 21, 18, 17, 15, 14, 13, 11, 11, 10, 9, 9, 7],
+            '5/8"':   [147, 101, 81, 69, 61, 56, 51, 48, 45, 42, 37, 34, 31, 29, 26, 23, 21, 20, 19, 18, 16],
+            '3/4"':   [257, 176, 142, 121, 107, 97, 90, 83, 78, 74, 65, 59, 55, 51, 45, 41, 38, 35, 33, 31, 28],
+            '7/8"':   [364, 250, 201, 172, 152, 138, 127, 118, 111, 105, 93, 84, 77, 72, 64, 58, 53, 50, 46, 44, 40],
+            '1-1/8"': [778, 535, 429, 368, 326, 295, 272, 253, 237, 224, 198, 180, 165, 154, 136, 124, 114, 106, 99, 94, 85],
+            '1-3/8"': [1401, 963, 773, 662, 586, 531, 489, 455, 427, 403, 357, 324, 298, 277, 245, 222, 205, 190, 179, 169, 153],
+          }
+        }
+      };
+
+      // Equivalent length of threaded fittings, in feet of straight pipe — for the
+      // Equivalent Length method of accounting for fitting resistance in a gas run.
+      // Applies to threaded black iron fittings only (no equivalent copper/flare data
+      // provided). Only covers 3/8" through 1-1/4"; larger sizes have no data here —
+      // those rows are flagged rather than guessed.
+      const FITTING_EQUIV_LENGTHS = {
+        blackIron: {
+          '3/8"':   { elbow45: 0.58, elbow90: 1.23, tee: 2.46 },
+          '1/2"':   { elbow45: 0.73, elbow90: 1.55, tee: 3.10 },
+          '3/4"':   { elbow45: 0.96, elbow90: 2.06, tee: 4.12 },
+          '1"':     { elbow45: 1.22, elbow90: 2.62, tee: 5.24 },
+          '1-1/4"': { elbow45: 1.61, elbow90: 3.45, tee: 6.90 },
+        }
+      };
+
       const STORAGE_KEY = 'blackIronMergedState';
       const HISTORY_KEY = 'blackIronMergedJobHistory';
       const FIT_COLLAPSE_KEY = 'biFitGroupCollapsed';
@@ -10557,6 +10665,15 @@
         faceLength: document.getElementById('biFaceLength'),
         takeoutEachEnd: document.getElementById('biTakeoutEachEnd'),
         cutQty: document.getElementById('biCutQty'),
+        gasCapMaterial: document.getElementById('biGasCapMaterial'),
+        gasCapLength: document.getElementById('biGasCapLength'),
+        gasCapLoad: document.getElementById('biGasCapLoad'),
+        gasCapBtuPerCf: document.getElementById('biGasCapBtuPerCf'),
+        gasCapElbow45: document.getElementById('biGasCapElbow45'),
+        gasCapElbow90: document.getElementById('biGasCapElbow90'),
+        gasCapTee: document.getElementById('biGasCapTee'),
+        gasCapCheck: document.getElementById('biGasCapCheck'),
+        gasCapResults: document.getElementById('biGasCapResults'),
         list: document.getElementById('biList'),
         groupedList: document.getElementById('biGroupedList'),
         itemCount: document.getElementById('biItemCount'),
@@ -11071,6 +11188,167 @@
           quantity
         });
       }
+
+      // ── Gas Pipe Capacity Checker ───────────────────────────────────────────
+      function normalizeSizeToTableKey(raw){
+        let s = String(raw || '').trim();
+        if (!s) return '';
+        s = s.replace(/\s+/g, '-');
+        if (!s.endsWith('"')) s += '"';
+        return s;
+      }
+      function gasCapLookupLength(table, lengthFt){
+        const lengths = table.lengths;
+        for (let i = 0; i < lengths.length; i++) {
+          if (lengths[i] >= lengthFt) return { index: i, lengthUsed: lengths[i], exceeds: false };
+        }
+        return { index: lengths.length - 1, lengthUsed: lengths[lengths.length - 1], exceeds: true };
+      }
+      function renderGasCapacityResults(){
+        const materialKey = els.gasCapMaterial.value;
+        const table = GAS_CAPACITY_TABLES[materialKey];
+        const straightLen = parseFloat(els.gasCapLength.value || '0');
+        const loadBtu = parseFloat(els.gasCapLoad.value || '0');
+        const btuPerCf = parseFloat(els.gasCapBtuPerCf.value || '1000') || 1000;
+        const elbow45Qty = Math.max(0, parseInt(els.gasCapElbow45.value || '0', 10) || 0);
+        const elbow90Qty = Math.max(0, parseInt(els.gasCapElbow90.value || '0', 10) || 0);
+        const teeQty = Math.max(0, parseInt(els.gasCapTee.value || '0', 10) || 0);
+        const hasFittings = (elbow45Qty + elbow90Qty + teeQty) > 0;
+        const fittingTable = FITTING_EQUIV_LENGTHS[materialKey] || null;
+
+        if (!(straightLen > 0)) {
+          els.gasCapResults.innerHTML = '<div class="bi-muted">Enter a straight pipe length to check capacity.</div>';
+          return;
+        }
+
+        const requiredCf = loadBtu > 0 ? (loadBtu / btuPerCf) : null;
+
+        const selectedRaw = materialKey === 'blackIron' ? (els.od ? els.od.value : '') : (els.gasCopperSize ? els.gasCopperSize.value : '');
+        const selectedKey = normalizeSizeToTableKey(selectedRaw);
+
+        let anyMissingFittingData = false;
+
+        // Equivalent length depends on pipe size (bigger fittings = more equivalent
+        // length), so each size gets its own total length and its own table row.
+        const rows = table.sizes.map(sz => {
+          const fit = fittingTable ? fittingTable[sz] : null;
+          let totalLen, fittingDataOk;
+          if (hasFittings && !fit) {
+            // Fittings were entered but we have no equivalent-length data for this
+            // size — don't guess; flag it instead of silently using straight length.
+            totalLen = null;
+            fittingDataOk = false;
+            anyMissingFittingData = true;
+          } else {
+            const fittingLen = fit ? (elbow45Qty * fit.elbow45 + elbow90Qty * fit.elbow90 + teeQty * fit.tee) : 0;
+            totalLen = straightLen + fittingLen;
+            fittingDataOk = true;
+          }
+
+          if (!fittingDataOk) {
+            return { size: sz, totalLen: null, lengthUsed: null, exceeds: false, cap: null, capBtu: null, pass: null, fittingDataOk };
+          }
+
+          const { lengthUsed, exceeds } = gasCapLookupLength(table, totalLen);
+          const cap = table.capacity[sz][table.lengths.indexOf(lengthUsed)];
+          const capBtu = Math.round(cap * btuPerCf);
+          const pass = requiredCf !== null ? (cap >= requiredCf) : null;
+          return { size: sz, totalLen, lengthUsed, exceeds, cap, capBtu, pass, fittingDataOk };
+        });
+
+        let recommendedSize = null;
+        if (requiredCf !== null) {
+          const found = rows.find(r => r.fittingDataOk && r.pass);
+          if (found) recommendedSize = found.size;
+        }
+
+        let badgeHtml = '';
+        if (selectedRaw) {
+          const selRow = rows.find(r => r.size === selectedKey);
+          if (selRow && !selRow.fittingDataOk) {
+            badgeHtml = `<div class="bi-muted" style="margin-bottom:.75rem;">No fitting equivalent-length data for ${esc(selectedKey)} &mdash; add your fitting lengths to the straight length manually for this size.</div>`;
+          } else if (selRow) {
+            if (requiredCf !== null) {
+              const cls = selRow.pass ? 'pass' : 'fail';
+              const verdict = selRow.pass ? 'PASS' : 'UNDERSIZED';
+              badgeHtml = `<div class="bi-gascap-badge ${cls}">
+                <span>Selected size ${esc(selectedKey)}: ${verdict}</span>
+                <span>${selRow.cap.toLocaleString()} cu ft/hr (${selRow.capBtu.toLocaleString()} BTU/hr) @ ${selRow.lengthUsed} ft</span>
+              </div>`;
+            } else {
+              badgeHtml = `<div class="bi-gascap-badge" style="background:rgba(255,69,0,.12);border:1px solid rgba(255,69,0,.35);color:#ffb184;">
+                <span>Selected size ${esc(selectedKey)} capacity</span>
+                <span>${selRow.cap.toLocaleString()} cu ft/hr (${selRow.capBtu.toLocaleString()} BTU/hr) @ ${selRow.lengthUsed} ft</span>
+              </div>`;
+            }
+          } else {
+            badgeHtml = `<div class="bi-muted" style="margin-bottom:.75rem;">Selected size ${esc(selectedRaw)} is not in the ${esc(table.label)} capacity table.</div>`;
+          }
+        }
+
+        const fittingNote = hasFittings
+          ? `<div class="bi-gascap-note">Fitting equivalent length added per size: ${elbow45Qty ? elbow45Qty + '&times; 45&deg; elbow, ' : ''}${elbow90Qty ? elbow90Qty + '&times; 90&deg; elbow, ' : ''}${teeQty ? teeQty + '&times; tee, ' : ''}on top of ${straightLen} ft straight run. Total equivalent length varies by size &mdash; see the table.</div>`
+          : '';
+        const missingFitNote = anyMissingFittingData
+          ? `<div class="bi-gascap-note" style="color:#ff9aa4;">Sizes marked N/A have no fitting equivalent-length data (only 3/8"&ndash;1-1/4" threaded fittings are covered) &mdash; add fitting length manually for those rows.</div>`
+          : '';
+        const copperFitNote = (hasFittings && materialKey === 'copper')
+          ? `<div class="bi-gascap-note" style="color:#ff9aa4;">Fitting equivalent lengths are for threaded black iron fittings and don't apply to copper &mdash; straight length only is used below.</div>`
+          : '';
+
+        const recNote = requiredCf !== null
+          ? (recommendedSize
+              ? `<div class="bi-gascap-note">Minimum size for ${Math.round(loadBtu).toLocaleString()} BTU/hr: <b style="color:#ffb184;">${esc(recommendedSize)}</b></div>`
+              : `<div class="bi-gascap-note" style="color:#ff9aa4;">No size in this table carries ${Math.round(loadBtu).toLocaleString()} BTU/hr at this length. Consider a shorter run, fewer fittings, a parallel line, or a full engineering sizing calc.</div>`)
+          : `<div class="bi-gascap-note">Enter an appliance load (BTU/hr) to see pass/fail and a recommended minimum size.</div>`;
+
+        const tableRows = rows.map(r => {
+          if (!r.fittingDataOk) {
+            const cls = selectedKey && r.size === selectedKey ? 'gascap-selected' : '';
+            return `<tr class="${cls}">
+              <td>${esc(r.size)}</td>
+              <td>N/A</td>
+              <td>N/A</td>
+              <td>N/A</td>
+              <td class="gascap-status">&mdash;</td>
+            </tr>`;
+          }
+          let cls = '';
+          if (requiredCf !== null) cls += r.pass ? 'gascap-pass' : 'gascap-fail';
+          if (recommendedSize && r.size === recommendedSize) cls += ' gascap-recommended';
+          if (selectedKey && r.size === selectedKey) cls += ' gascap-selected';
+          const status = requiredCf !== null ? (r.pass ? '\u2713 OK' : '\u2717 Low') : '\u2014';
+          return `<tr class="${cls.trim()}">
+            <td>${esc(r.size)}${recommendedSize && r.size === recommendedSize ? ' \u2605' : ''}</td>
+            <td>${r.totalLen % 1 === 0 ? r.totalLen : r.totalLen.toFixed(1)}${r.exceeds ? '*' : ''}</td>
+            <td>${r.cap.toLocaleString()}</td>
+            <td>${r.capBtu.toLocaleString()}</td>
+            <td class="gascap-status">${status}</td>
+          </tr>`;
+        }).join('');
+
+        const anyExceeds = rows.some(r => r.exceeds);
+        const exceedsNote = anyExceeds
+          ? `<div class="bi-gascap-note">* exceeds this table's max tabulated length (600 ft) &mdash; showing the 600 ft row. Longer runs need a full engineering sizing calc.</div>`
+          : '';
+
+        els.gasCapResults.innerHTML = `
+          ${badgeHtml}
+          ${fittingNote}
+          ${copperFitNote}
+          ${missingFitNote}
+          ${recNote}
+          <div class="bi-gascap-table-wrap">
+            <table class="bi-gascap-table">
+              <thead><tr><th>Size</th><th>Equiv. Length (ft)</th><th>cu ft/hr</th><th>BTU/hr</th><th>Status</th></tr></thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+          </div>
+          ${exceedsNote}
+          <small class="bi-muted">${esc(table.tableRef)}</small>
+        `;
+      }
+
       function addItem(prefill){
         try {
           if (!state.selectedFitting && !prefill) throw new Error('Choose a fitting type first.');
@@ -11287,9 +11565,22 @@
       els.export.addEventListener('click', exportCsv);
       els.clear.addEventListener('click', clearList);
       els.calcCut.addEventListener('click', addCutPipe);
+      els.gasCapCheck.addEventListener('click', renderGasCapacityResults);
+      els.gasCapMaterial.addEventListener('change', () => { if (els.gasCapLength.value) renderGasCapacityResults(); });
+      [els.gasCapLength, els.gasCapLoad, els.gasCapBtuPerCf, els.gasCapElbow45, els.gasCapElbow90, els.gasCapTee].forEach(input => {
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); renderGasCapacityResults(); } });
+        input.addEventListener('change', () => { if (els.gasCapLength.value && els.gasCapResults.innerHTML.trim()) renderGasCapacityResults(); });
+      });
       els.jobName.addEventListener('change', () => { saveHistory(els.jobName.value); saveState(); });
       els.jobName.addEventListener('input', saveState);
-      els.od.addEventListener('change', () => { els.cutPipeSize.value = els.od.value; saveState(); });
+      els.od.addEventListener('change', () => {
+        els.cutPipeSize.value = els.od.value;
+        saveState();
+        if (els.gasCapMaterial.value === 'blackIron' && els.gasCapLength.value && els.gasCapResults.innerHTML.trim()) renderGasCapacityResults();
+      });
+      els.gasCopperSize.addEventListener('change', () => {
+        if (els.gasCapMaterial.value === 'copper' && els.gasCapLength.value && els.gasCapResults.innerHTML.trim()) renderGasCapacityResults();
+      });
       els.qty.addEventListener('focus', () => { try { els.qty.select(); } catch(e) {} });
       els.list.addEventListener('click', e => {
         const card = e.target.closest('.bi-card');
