@@ -907,6 +907,25 @@
         box-shadow: inset 0 0 0 1px rgba(111,66,193,.4);
       }
 
+      /* ── Inventory: Black Iron size chips ── */
+      .bi-size-chip {
+        background:#2a2a2a;
+        color:#ccc;
+        border:1px solid #555;
+        border-radius:999px;
+        padding:.28rem .75rem;
+        font-size:.82rem;
+        min-height:auto;
+        line-height:1.2;
+        cursor:pointer;
+      }
+      .bi-size-chip.active {
+        background:#ff4500;
+        border-color:#ff4500;
+        color:#fff;
+        font-weight:700;
+      }
+
       /* ── Inventory tab ── */
       #inventorySummary .summary-grid {
         display: grid;
@@ -1570,7 +1589,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 10 · 2026-08-16</div>
+    <div id="appBuildTag">Build 11 · 2026-08-23</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -2506,6 +2525,13 @@
       </div>
 
       <input type="text" id="invSearch" class="saved-materials-search" placeholder="Search inventory">
+      <div id="biSizeChips" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:-.35rem 0 .75rem;">
+        <span style="font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.04em;">Black Iron:</span>
+        <button type="button" class="bi-size-chip" data-size="1/2&quot;">1/2"</button>
+        <button type="button" class="bi-size-chip" data-size="3/4&quot;">3/4"</button>
+        <button type="button" class="bi-size-chip" data-size="1&quot;">1"</button>
+        <button type="button" class="bi-size-chip" data-size="1-1/4&quot;">1-1/4"</button>
+      </div>
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:.4rem;margin:0;font-size:.88rem;white-space:nowrap;">
           Sort by:
@@ -3121,11 +3147,15 @@
         const wrap = document.getElementById('inventoryList');
         if (!wrap) return;
         renderInventoryStats();
-        const filter = normalizeMaterialKey(filterText);
+        const filterTerms = normalizeMaterialKey(filterText).split(/\s+/).filter(Boolean);
         const sortMode = document.getElementById('invSort')?.value || 'qty-asc';
         const lowOnly = !!document.getElementById('invLowStockOnly')?.checked;
         let items = Object.values(materialCatalog)
-          .filter(item => !filter || normalizeMaterialKey(item.desc).includes(filter));
+          .filter(item => {
+            if (!filterTerms.length) return true;
+            const key = normalizeMaterialKey(item.desc);
+            return filterTerms.every(term => key.includes(term));
+          });
         if (lowOnly) {
           items = items.filter(item => item.lowStockAlertEnabled && (item.qty || 0) <= (item.minQty || 0));
         }
@@ -9092,6 +9122,10 @@
         { desc:'3/4" Black Iron Tee',             unit:'ea',  distributorCost:5,    markup:25, customerPrice:6.25,      category:'gasline' },
         { desc:'1/2" Black Iron Union',           unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'gasline' },
         { desc:'3/4" Black Iron Union',           unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,     category:'gasline' },
+        { desc:'Black Iron Pipe 1-1/4" (per ft)', unit:'ft',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'gasline' },
+        { desc:'1-1/4" Black Iron 90 Elbow',      unit:'ea',  distributorCost:6.50, markup:25, customerPrice:8.13,   category:'gasline' },
+        { desc:'1-1/4" Black Iron Tee',           unit:'ea',  distributorCost:7.50, markup:25, customerPrice:9.38,   category:'gasline' },
+        { desc:'1-1/4" Black Iron Union',         unit:'ea',  distributorCost:13,   markup:25, customerPrice:16.25,  category:'gasline' },
         { desc:'1/2" Ball Valve (Indoor Gas)',    unit:'ea',  distributorCost:15,   markup:25, customerPrice:18.75,     category:'gasline' },
         { desc:'3/4" Ball Valve (Indoor Gas)',    unit:'ea',  distributorCost:20,   markup:25, customerPrice:25.0,     category:'gasline' },
         { desc:'Drip Leg / Sediment Trap',        unit:'ea',  distributorCost:25,   markup:25, customerPrice:31.25,     category:'gasline' },
@@ -10088,8 +10122,24 @@
       setTimeout(checkLowStockAlerts, 1300);
 
       // ── Inventory tab wiring ────────────────────────────────────────────────
+      let activeBiSizeChip = null;
       document.getElementById('invSearch')?.addEventListener('input', function() {
+        activeBiSizeChip = null;
+        document.querySelectorAll('.bi-size-chip').forEach(btn => btn.classList.remove('active'));
         renderInventoryList(this.value);
+      });
+      document.querySelectorAll('.bi-size-chip').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const size = this.dataset.size;
+          const searchInput = document.getElementById('invSearch');
+          if (!searchInput) return;
+          activeBiSizeChip = (activeBiSizeChip === size) ? null : size;
+          searchInput.value = activeBiSizeChip ? `black iron ${activeBiSizeChip}` : '';
+          document.querySelectorAll('.bi-size-chip').forEach(b => {
+            b.classList.toggle('active', b.dataset.size === activeBiSizeChip);
+          });
+          renderInventoryList(searchInput.value);
+        });
       });
       document.getElementById('invSort')?.addEventListener('change', function() {
         renderInventoryList(document.getElementById('invSearch')?.value || '');
