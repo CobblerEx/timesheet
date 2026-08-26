@@ -229,7 +229,7 @@
         justify-content:center;
         gap:.6rem;
         flex-wrap:wrap;
-        padding:.5rem 1rem;
+        padding:.5rem 1rem calc(.5rem + env(safe-area-inset-bottom, 0px));
         background:#1a1a1a;
         border-top:1px solid rgba(255,69,0,.35);
         box-shadow:0 -2px 16px rgba(0,0,0,.4);
@@ -11764,6 +11764,27 @@
           if (isTabActive('blackIronTab')) syncStickyFromMain();
         };
       }
+
+      // ── Keep bars pinned to the true visible bottom edge ──────────────────
+      // iOS can leave `position:fixed;bottom:0` bars stranded mid-page after
+      // the keyboard closes or the browser chrome resizes, because the layout
+      // viewport and the visual viewport fall out of sync. Re-anchor the bars
+      // to the visual viewport any time it changes.
+      const vv = window.visualViewport;
+      function pinStickyBars() {
+        if (!vv) return;
+        const gap = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+        [invoiceBar, biBar].forEach(bar => {
+          if (bar) bar.style.bottom = gap + 'px';
+        });
+      }
+      if (vv) {
+        vv.addEventListener('resize', pinStickyBars);
+        vv.addEventListener('scroll', pinStickyBars);
+      }
+      window.addEventListener('orientationchange', () => setTimeout(pinStickyBars, 300));
+      document.addEventListener('focusout', () => setTimeout(pinStickyBars, 300));
+      pinStickyBars();
     });
 
     // ── Black Iron collapsible sections ────────────────────────────────────────
