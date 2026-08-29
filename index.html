@@ -243,6 +243,12 @@
         visibility: hidden;
         transition:transform .25s ease, opacity .25s ease, visibility 0s linear .25s;
       }
+      /* While any full-screen modal (Quick Add, Saved Materials, Client Profiles,
+         etc.) is open, the invoice/black-iron sticky bars must not show through —
+         iOS can leave them visible above the keyboard, overlapping modal content. */
+      body.modal-open .sticky-action-bar {
+        display:none !important;
+      }
 
       .sticky-action-bar .sab-label {
         font-size:.8rem;
@@ -1892,7 +1898,6 @@
           </label>
           <button type="button" id="newInvoiceDraft" class="mini-btn">New Draft</button>
           <button type="button" id="saveInvoiceDraft" class="mini-btn">Save Draft</button>
-          <button type="button" id="appendInvoiceDraft" class="mini-btn" style="background:#17a2b8;">Append Work To Draft</button>
         </div>
 
         <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:0.5rem;flex-wrap:wrap;">
@@ -1913,7 +1918,7 @@
           <button type="button" id="deleteInvoiceDraft" class="mini-btn" style="background:#dc3545;">Delete Draft</button>
         </div>
         <small class="muted-note" style="margin-top:-.35rem;margin-bottom:.85rem;">
-          To keep adding work on another day: load the draft, check the new timesheet entries, then click <b>Append Work To Draft</b>.
+          To keep adding work on another day: load the draft, check the new timesheet entries, then click <b>Save Draft</b> again.
         </small>
 
         <label>Include Entries In This Invoice:</label>
@@ -6783,8 +6788,7 @@
         }));
       }
 
-      function saveCurrentInvoiceDraft(options = {}) {
-        const appendMode = !!options.appendMode;
+      function saveCurrentInvoiceDraft() {
         const invoiceId = document.getElementById('invoiceId').value.trim();
         if (!invoiceId) {
           alert('Enter or load an Invoice / Work Order ID first.');
@@ -6794,17 +6798,13 @@
 
         let selectedIds = getSelectedInvoiceEntryIds();
         const existingDraft = invoices[invoiceId];
-
-        if (appendMode && !existingDraft) {
-          alert('Load an existing draft first, then append the new work to it.');
-          return;
-        }
+        let isAppendingToExistingDraft = false;
 
         if (existingDraft) {
           const existingIds = (existingDraft.linkedEntryIds || []).map(String);
           const incomingIds = selectedIds.map(String);
           const mergedIds = [...new Set([...existingIds, ...incomingIds])];
-          const isAppendingToExistingDraft = mergedIds.some(id => !existingIds.includes(id));
+          isAppendingToExistingDraft = mergedIds.some(id => !existingIds.includes(id));
 
           if (isAppendingToExistingDraft) {
             selectedIds = populateInvoiceFromDraftAppend(existingDraft, selectedIds);
@@ -6870,7 +6870,7 @@
         // previous session — so trust the UI value instead.
         const allLinkedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
         const currentLaborDesc = document.getElementById('laborDescription').value.trim();
-        const savedLaborDescriptionDated = appendMode
+        const savedLaborDescriptionDated = isAppendingToExistingDraft
           ? currentLaborDesc
           : (allLinkedEntries.length > 0
               ? getLaborDescriptionFromTimesheet(allLinkedEntries, true)
@@ -6909,26 +6909,12 @@
         renderInvoiceEntrySelector(selectedIds);
         updateInvoiceSummary();
         refreshInvoiceDraftList(invoiceId);
-        alert(existingDraft ? `Invoice draft "${invoiceId}" updated${appendMode ? ' with the newly selected work' : ' and appended'}.` : `Invoice draft "${invoiceId}" saved.`);
-      }
-
-      function appendWorkToLoadedDraft() {
-        const invoiceId = document.getElementById('invoiceId').value.trim();
-        if (!invoiceId || !invoices[invoiceId]) {
-          alert('Load the draft you want to continue first.');
-          return;
-        }
-
-        const currentIds = (invoices[invoiceId].linkedEntryIds || []).map(String);
-        const selectedIds = getSelectedInvoiceEntryIds().map(String);
-        const newIds = selectedIds.filter(id => !currentIds.includes(id));
-
-        if (!newIds.length) {
-          alert('Select the new timesheet entries you want to add to this draft first.');
-          return;
-        }
-
-        saveCurrentInvoiceDraft({ appendMode: true });
+        const message = !existingDraft
+          ? `Invoice draft "${invoiceId}" saved.`
+          : isAppendingToExistingDraft
+            ? `Invoice draft "${invoiceId}" updated with the newly selected work.`
+            : `Invoice draft "${invoiceId}" updated.`;
+        alert(message);
       }
 
       function loadInvoiceDraftById(invoiceId) {
@@ -7652,7 +7638,6 @@
 
       document.getElementById('clearInvoice').onclick = () => clearInvoice();
       document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
-      document.getElementById('appendInvoiceDraft').onclick = () => appendWorkToLoadedDraft();
 
       document.getElementById('entrySelectorFilter')?.addEventListener('input', debounce(() => {
         renderInvoiceEntrySelector();
@@ -11669,6 +11654,24 @@
     });
     if (typeof checkBackupReminder === 'function') checkBackupReminder();
   });
+
+    // ── Hide sticky bars behind any open full-screen modal ───────────────────
+    // Any modal sharing the .saved-materials-modal class (Quick Add, Saved
+    // Materials, Client Profiles, and future ones) toggles this automatically —
+    // no need to touch each modal's open/close code.
+    (function () {
+      function syncModalOpenBodyClass() {
+        const anyOpen = !!document.querySelector('.saved-materials-modal.show');
+        document.body.classList.toggle('modal-open', anyOpen);
+      }
+      document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.saved-materials-modal').forEach(modal => {
+          new MutationObserver(syncModalOpenBodyClass)
+            .observe(modal, { attributes: true, attributeFilter: ['class'] });
+        });
+        syncModalOpenBodyClass();
+      });
+    })();
 
     // ── Sticky action bars ──────────────────────────────────────────────────
 
