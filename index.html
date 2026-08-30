@@ -11683,15 +11683,17 @@
         return document.getElementById(id)?.classList.contains('active');
       }
 
+      // True while the on-screen keyboard is up (visualViewport shrinks by
+      // more than a scroll-chrome-collapse amount). Both bars are fully
+      // hidden in this state — see pinStickyBars below for why.
+      let _kbOpen = false;
+
       let _btnRowVisible = true;
       const btnRowEl = document.querySelector('#invoiceBuilder .inline-group');
       if (btnRowEl && invoiceBar) {
         const obs = new IntersectionObserver(entries => {
           _btnRowVisible = entries[0].isIntersecting;
-          if (isTabActive('invoiceTab')) {
-            invoiceBar.classList.toggle('hidden', _btnRowVisible);
-            pinStickyBars();
-          }
+          updateInvoiceBar();
         }, { threshold: 0 });
         obs.observe(btnRowEl);
       }
@@ -11699,12 +11701,12 @@
       function updateInvoiceBar() {
         if (!invoiceBar) return;
         if (!isTabActive('invoiceTab')) { invoiceBar.classList.add('hidden'); return; }
-        invoiceBar.classList.toggle('hidden', _btnRowVisible);
+        invoiceBar.classList.toggle('hidden', _btnRowVisible || _kbOpen);
       }
 
       function updateBiBar() {
         if (!biBar) return;
-        biBar.classList.toggle('hidden', !isTabActive('blackIronTab'));
+        biBar.classList.toggle('hidden', !isTabActive('blackIronTab') || _kbOpen);
       }
 
       window.addEventListener('scroll', updateInvoiceBar, { passive: true });
@@ -11769,33 +11771,24 @@
         };
       }
 
-      // ── Keep bars pinned to the true visible bottom edge ──────────────────
-      // iOS can leave `position:fixed;bottom:0` bars stranded mid-page after
-      // the keyboard closes or the browser chrome resizes, because the layout
-      // viewport and the visual viewport fall out of sync. Re-anchor the bars
-      // to the visual viewport any time it changes.
-      //
-      // When the keyboard opens, pinStickyBars pushes each bar UP by `gap`
-      // (the keyboard height) so it still sits just above the keyboard. But
-      // the page's static reserved bottom padding (`#invoiceTab.active`'s
-      // 130px) only accounts for the bar's resting height with the keyboard
-      // closed — so once the bar is pushed up, it overlaps whatever form
-      // content/hint text is now sitting where the bar landed. We fix that
-      // by growing the active tab's bottom padding to match bar height + gap
-      // any time the bar moves, so scrollable content always has clearance.
+      // ── Hide the sticky bars outright while the keyboard is open ─────────
+      // First attempt: reposition the bar above the keyboard (bottom = gap)
+      // and reserve matching page padding so content wouldn't sit underneath.
+      // That didn't hold up — iOS's own "scroll the focused field into view"
+      // has no awareness of our bar, so it keeps scrolling content right up
+      // into the space the bar occupies no matter how much padding we add.
+      // Hiding the bar outright while typing is the only thing that can't be
+      // overlapped, and neither bar is needed mid-typing anyway.
       const vv = window.visualViewport;
-      const _tabForBar = new Map([]);
       function pinStickyBars() {
         if (!vv) return;
         const gap = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
-        [[invoiceBar, 'invoiceTab'], [biBar, 'blackIronTab']].forEach(([bar, tabId]) => {
-          if (!bar) return;
-          bar.style.bottom = gap + 'px';
-          const tab = document.getElementById(tabId);
-          if (!tab) return;
-          const barVisible = tab.classList.contains('active') && !bar.classList.contains('hidden');
-          tab.style.paddingBottom = barVisible ? (bar.offsetHeight + gap + 24) + 'px' : '';
-        });
+        // iOS keyboards run 200px+; Safari's own toolbar collapsing on
+        // scroll only ever accounts for well under that, so 150px cleanly
+        // tells the two apart.
+        _kbOpen = gap > 150;
+        updateInvoiceBar();
+        updateBiBar();
       }
       if (vv) {
         vv.addEventListener('resize', pinStickyBars);
@@ -11805,14 +11798,6 @@
       document.addEventListener('focusout', () => setTimeout(pinStickyBars, 300));
       document.addEventListener('focusin', () => setTimeout(pinStickyBars, 300));
       pinStickyBars();
-
-      // Recompute whenever the bars' own visibility changes (tab switch,
-      // scroll showing/hiding the invoice button row, etc.) — not just when
-      // the keyboard moves.
-      const _origUpdateInvoiceBar2 = updateInvoiceBar;
-      updateInvoiceBar = function() { _origUpdateInvoiceBar2(); pinStickyBars(); };
-      const _origUpdateBiBar2 = updateBiBar;
-      updateBiBar = function() { _origUpdateBiBar2(); pinStickyBars(); };
     });
 
     // ── Black Iron collapsible sections ────────────────────────────────────────
