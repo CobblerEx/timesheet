@@ -1595,7 +1595,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 11 · 2026-08-23</div>
+    <div id="appBuildTag">Build 12 · 2026-09-04</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -1922,7 +1922,15 @@
         </small>
 
         <label>Include Entries In This Invoice:</label>
-        <input type="text" id="entrySelectorFilter" placeholder="Filter by customer, job, or address…" style="margin-bottom:.35rem;" autocomplete="off">
+        <div class="inline-group" style="margin-bottom:.35rem;gap:.5rem;">
+          <input type="text" id="entrySelectorFilter" placeholder="Filter by customer, job, or address…" style="flex:1;min-width:180px;" autocomplete="off">
+          <select id="entryStatusFilter" style="flex:0 0 auto;min-width:140px;">
+            <option value="all" selected>All statuses</option>
+            <option value="unbilled">Unbilled only</option>
+            <option value="invoiced">Invoiced only</option>
+            <option value="draft-linked">Draft Linked only</option>
+          </select>
+        </div>
         <div id="invoiceEntrySelector"></div>
         <small class="muted-note">
           Invoiced entries are locked unless they belong to the invoice ID you currently have open. Draft-linked entries stay selectable for their current draft.
@@ -6328,6 +6336,7 @@
         const lockedDraftAddress = getLockedDraftAddress(currentInvoiceId);
         const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
         const filterVal = (document.getElementById('entrySelectorFilter')?.value || '').toLowerCase().trim();
+        const statusFilterVal = document.getElementById('entryStatusFilter')?.value || 'all';
 
         // Preserve archive section open/closed state across re-renders
         const archiveWasOpen = box.dataset.archiveOpen === 'true';
@@ -6347,9 +6356,13 @@
           (`${a.dateStr} ${a.timeIn}`).localeCompare(`${b.dateStr} ${b.timeIn}`)
         );
 
-        const matches = filterVal
+        const textMatches = filterVal
           ? sorted.filter(e => `${e.customerName || ''} ${e.jobName || ''} ${e.address || ''}`.toLowerCase().includes(filterVal))
           : sorted;
+
+        const matches = statusFilterVal === 'all'
+          ? textMatches
+          : textMatches.filter(e => (e.billingStatus || 'unbilled') === statusFilterVal);
 
         const liveEntries     = matches.filter(e => liveIds.has(String(e.id)));
         const archivedEntries = matches.filter(e => !liveIds.has(String(e.id))).reverse();
@@ -7642,6 +7655,10 @@
       document.getElementById('entrySelectorFilter')?.addEventListener('input', debounce(() => {
         renderInvoiceEntrySelector();
       }, 200));
+
+      document.getElementById('entryStatusFilter')?.addEventListener('change', () => {
+        renderInvoiceEntrySelector();
+      });
 
       document.getElementById('showArchivedInvoices').addEventListener('change', () => {
         refreshInvoiceDraftList(document.getElementById('invoiceId').value.trim());
