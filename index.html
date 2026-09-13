@@ -243,6 +243,16 @@
         visibility: hidden;
         transition:transform .25s ease, opacity .25s ease, visibility 0s linear .25s;
       }
+      /* While the keyboard is up, the bar relocates here instead of hiding —
+         see updateInvoiceBar()/_kbOpen. Top placement stays clear of the
+         keyboard entirely, so there's no fight with iOS's own scroll-into-view. */
+      .sticky-action-bar.pinned-top {
+        top: env(safe-area-inset-top, 0px);
+        bottom: auto;
+        border-top: none;
+        border-bottom: 1px solid rgba(255,69,0,.35);
+        box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      }
       /* While any full-screen modal (Quick Add, Saved Materials, Client Profiles,
          etc.) is open, the invoice/black-iron sticky bars must not show through —
          iOS can leave them visible above the keyboard, overlapping modal content. */
@@ -11717,8 +11727,21 @@
 
       function updateInvoiceBar() {
         if (!invoiceBar) return;
-        if (!isTabActive('invoiceTab')) { invoiceBar.classList.add('hidden'); return; }
-        invoiceBar.classList.toggle('hidden', _btnRowVisible || _kbOpen);
+        if (!isTabActive('invoiceTab')) {
+          invoiceBar.classList.add('hidden');
+          invoiceBar.classList.remove('pinned-top');
+          return;
+        }
+        if (_kbOpen) {
+          // Keyboard's up (e.g. right after "+ Add Item") — move the bar to
+          // the top instead of hiding it, so Add Item/Generate PDF/Boss Copy
+          // stay reachable without fighting the keyboard for space.
+          invoiceBar.classList.remove('hidden');
+          invoiceBar.classList.add('pinned-top');
+        } else {
+          invoiceBar.classList.remove('pinned-top');
+          invoiceBar.classList.toggle('hidden', _btnRowVisible);
+        }
       }
 
       function updateBiBar() {
