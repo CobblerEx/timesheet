@@ -11820,13 +11820,23 @@
       // Hiding the bar outright while typing is the only thing that can't be
       // overlapped, and neither bar is needed mid-typing anyway.
       const vv = window.visualViewport;
+      // A shrunk viewport only means the keyboard is open if something
+      // editable is actually focused — otherwise it's Safari's chrome
+      // collapsing/expanding (or a transient reading right after load),
+      // and without this guard the bar could get stuck pinned to the top.
+      function isEditableFocused() {
+        const el = document.activeElement;
+        if (!el) return false;
+        const tag = el.tagName;
+        return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+      }
       function pinStickyBars() {
         if (!vv) return;
         const gap = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
         // iOS keyboards run 200px+; Safari's own toolbar collapsing on
         // scroll only ever accounts for well under that, so 150px cleanly
         // tells the two apart.
-        _kbOpen = gap > 150;
+        _kbOpen = gap > 150 && isEditableFocused();
         updateInvoiceBar();
         updateBiBar();
       }
