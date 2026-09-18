@@ -11710,9 +11710,8 @@
         return document.getElementById(id)?.classList.contains('active');
       }
 
-      // True while the on-screen keyboard is up (visualViewport shrinks by
-      // more than a scroll-chrome-collapse amount). Both bars are fully
-      // hidden in this state — see pinStickyBars below for why.
+      // True while something editable is focused, i.e. the on-screen
+      // keyboard is presumed up — see syncKbOpen below.
       let _kbOpen = false;
 
       let _btnRowVisible = true;
@@ -11811,43 +11810,36 @@
         };
       }
 
-      // ── Hide the sticky bars outright while the keyboard is open ─────────
+      // ── Move the bar out of the keyboard's way ────────────────────────────
       // First attempt: reposition the bar above the keyboard (bottom = gap)
       // and reserve matching page padding so content wouldn't sit underneath.
       // That didn't hold up — iOS's own "scroll the focused field into view"
-      // has no awareness of our bar, so it keeps scrolling content right up
+      // has no awareness of our bar, so it kept scrolling content right up
       // into the space the bar occupies no matter how much padding we add.
-      // Hiding the bar outright while typing is the only thing that can't be
-      // overlapped, and neither bar is needed mid-typing anyway.
-      const vv = window.visualViewport;
-      // A shrunk viewport only means the keyboard is open if something
-      // editable is actually focused — otherwise it's Safari's chrome
-      // collapsing/expanding (or a transient reading right after load),
-      // and without this guard the bar could get stuck pinned to the top.
+      // Second attempt: pin the bar to the top based on how much
+      // visualViewport had shrunk vs window.innerHeight. That's an indirect
+      // signal — it also shrinks when Safari's own chrome collapses/expands,
+      // or reads a stale value right after page load — so it kept getting
+      // "keyboard open" wrong (bar stuck at the top with no keyboard up).
+      // Focus is the actual cause of the keyboard opening, so drive off
+      // that directly instead of inferring it from viewport size.
       function isEditableFocused() {
         const el = document.activeElement;
         if (!el) return false;
         const tag = el.tagName;
         return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
       }
-      function pinStickyBars() {
-        if (!vv) return;
-        const gap = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
-        // iOS keyboards run 200px+; Safari's own toolbar collapsing on
-        // scroll only ever accounts for well under that, so 150px cleanly
-        // tells the two apart.
-        _kbOpen = gap > 150 && isEditableFocused();
+      function syncKbOpen() {
+        _kbOpen = isEditableFocused();
         updateInvoiceBar();
         updateBiBar();
       }
-      if (vv) {
-        vv.addEventListener('resize', pinStickyBars);
-        vv.addEventListener('scroll', pinStickyBars);
-      }
-      window.addEventListener('orientationchange', () => setTimeout(pinStickyBars, 300));
-      document.addEventListener('focusout', () => setTimeout(pinStickyBars, 300));
-      document.addEventListener('focusin', () => setTimeout(pinStickyBars, 300));
-      pinStickyBars();
+      document.addEventListener('focusin', syncKbOpen);
+      // A short delay lets focus land on the *next* field first (e.g.
+      // tabbing between inputs) before we decide the keyboard actually closed.
+      document.addEventListener('focusout', () => setTimeout(syncKbOpen, 50));
+      window.addEventListener('orientationchange', () => setTimeout(syncKbOpen, 300));
+      syncKbOpen();
     });
 
     // ── Black Iron collapsible sections ────────────────────────────────────────
