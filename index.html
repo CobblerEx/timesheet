@@ -1442,12 +1442,15 @@
       #qtiMinimizeBtn:active { transform:scale(.96); }
       #qtiMinimizeBtn .qti-chevron { display:inline-block; transition:transform .25s ease; font-style:normal; }
       #qtiBody {
-        overflow:hidden;
-        max-height:600px;
+        /* expanded: no height cap, so the parsed preview table and the
+           "Add to Timesheet" button are never clipped (was max-height:600px) */
+        overflow:visible;
+        max-height:none;
         opacity:1;
-        transition:max-height .35s ease, opacity .25s ease;
+        transition:opacity .25s ease;
       }
       #qtiBody.qti-collapsed {
+        overflow:hidden;
         max-height:0;
         opacity:0;
         pointer-events:none;
@@ -1605,7 +1608,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 12 · 2026-09-04</div>
+    <div id="appBuildTag">Build 13 · 2026-10-01</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
