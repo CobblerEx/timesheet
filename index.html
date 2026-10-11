@@ -1608,7 +1608,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 13 · 2026-10-01</div>
+    <div id="appBuildTag">Build 14 · 2026-10-09</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -11829,6 +11829,10 @@
       function isEditableFocused() {
         const el = document.activeElement;
         if (!el) return false;
+        // The sticky bars hold their own select and qty field. If focus is
+        // inside a bar, do NOT treat it as "keyboard open" — that would hide
+        // the bar (and close the picker) the moment the user taps it.
+        if (el.closest && el.closest('.sticky-action-bar')) return false;
         const tag = el.tagName;
         return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
       }
