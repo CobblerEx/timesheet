@@ -1608,7 +1608,7 @@
     </div>
 
     <h1>Timesheet Creator</h1>
-    <div id="appBuildTag">Build 14 · 2026-10-09</div>
+    <div id="appBuildTag">Build 15 · 2026-10-12</div>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
@@ -1644,6 +1644,8 @@
             <option value="">-- Select to auto-fill description --</option>
             <optgroup label="Installations">
               <option value="Furnace Installation">Furnace Installation</option>
+              <option value="Furnace Swap (636)">Furnace Swap (636 Venting)</option>
+              <option value="Furnace & AC Installation">Furnace &amp; A/C Installation</option>
               <option value="AC Installation">A/C Installation</option>
               <option value="Water Heater Install - Tank">Water Heater Installation (Tank)</option>
               <option value="Water Heater Install - Tankless">Water Heater Installation (Tankless)</option>
@@ -2634,6 +2636,8 @@
         "Range Oven Service": "Serviced commercial range oven. Inspected burners, ignition system, and gas valve operation. Cleaned burner ports, drip pans, and oven interior. Calibrated thermostat and verified accurate oven temperature. Checked door gasket, hinges, and broiler operation. Tested all burners for proper flame pattern.",
         "Flat Top Griddle Service": "Serviced commercial flat top griddle. Inspected burners and ignition system (gas) or heating elements (electric). Cleaned griddle surface and grease troughs. Calibrated thermostat and verified even heat distribution across cooking surface. Checked gas valve operation, pilot assembly, and verified proper temperature control.",
         "Furnace Installation": "Removed existing furnace and disconnected gas, electrical, and venting connections. Installed new high-efficiency gas furnace. Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape. Ran new CSA 636 certified flue exhaust and combustion air intake pipe through exterior wall with approved termination caps. Connected gas and drip leg. Wired new thermostat, connected electrical disconnect, and ran condensate drain with trap. Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.",
+        "Furnace Swap (636)": "Removed existing furnace and disconnected gas, electrical, and venting connections. Set new furnace in place, leveled and secured, and connected to existing supply and return plenum. Sealed all plenum and duct joints with aluminum tape. Ran new CSA 636 certified flue exhaust and combustion air intake pipe through exterior wall with approved termination caps. Connected gas supply line and installed drip leg per code. Wired thermostat and verified low voltage control wiring. Ran condensate drain line with trap to an approved drainage point. Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.",
+        "Furnace & AC Installation": "Removed existing furnace and disconnected gas, electrical, and venting connections. Recovered refrigerant from system using certified recovery equipment. Removed low voltage and high voltage wiring in preparation for equipment replacement. Set new furnace in place, leveled and secured, and connected to existing supply and return plenum. Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape. Connected gas supply line and installed drip leg per code. Wired thermostat and verified low voltage control wiring. Ran condensate drain line with trap to an approved drainage point. Mounted indoor evaporator coil on furnace plenum with sheet metal transitions, S cleat, and drive cleats. Set outdoor condenser on pad and leveled for proper drainage. Ran refrigerant line set through exterior wall, brazed connections under nitrogen purge, and insulated and sealed all line set penetrations. Reinstalled low voltage and high voltage wiring to new equipment. Pressure tested system to 400 PSI, evacuated to 500 microns, and charged with refrigerant to manufacturer specification. Installed PVC condensate drain line with trap. Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels. Tested air conditioning in cooling mode and verified refrigerant pressures and supply air temperatures.",
         "AC Installation": "Installed new air conditioning system. Mounted indoor evaporator coil on furnace plenum with sheet metal transitions, S cleat, and drive cleats. Sealed all duct connections with aluminum tape. Set outdoor condenser on pad, ran pre-insulated refrigerant line set through exterior wall. Installed disconnect box and electrical whip. Brazed refrigerant connections under nitrogen purge, pressure tested system to 400 PSI, evacuated to 500 microns, and charged with R-410A to manufacturer specification. Installed PVC condensate drain line with trap. Confirmed proper system operation, refrigerant pressures, and supply air temperatures.",
         "Water Heater Install - Tank": "Removed old tank water heater and disconnected all utilities. Installed new tank water heater in same location. Connected cold water inlet and hot water outlet using dielectric unions. Installed new T&P relief valve with full-size discharge pipe to safe termination. Connected gas flex connector and ensured proper venting. Installed expansion tank and new ball valve shutoff. Tested all connections for leaks, lit pilot, set thermostat, and verified proper hot water temperature and recovery.",
         "Water Heater Install - Tankless": "Removed existing water heater and capped connections. Upgraded gas line as required for new BTU demand. Installed new condensing tankless water heater. Ran 2-pipe 636 direct-vent through exterior wall for exhaust and combustion air intake. Connected gas, cold water inlet, and hot water outlet with isolation valves. Installed Condensate drain, and expansion protection. Commissioned unit, set temperature, tested flow rate at multiple fixtures, and verified error-free operation.",
@@ -2645,6 +2649,8 @@
       const JOB_TYPE_TO_TASK_MAP = {
         'Furnace Tune-Up':              { cat: 'hvac',       equip: 'Furnace / Boiler' },
         'Furnace Installation':         { cat: 'hvac',       equip: 'Furnace / Boiler' },
+        'Furnace Swap (636)':           { cat: 'hvac',       equip: 'Furnace Swap (636)' },
+        'Furnace & AC Installation':    { cat: 'hvac',       equip: 'Furnace & A/C Install' },
         'AC Maintenance':               { cat: 'hvac',       equip: 'Air Conditioner' },
         'AC Installation':              { cat: 'hvac',       equip: 'Air Conditioner' },
         'Mini-Split Service':           { cat: 'hvac',       equip: 'Mini-Split System' },
@@ -4772,6 +4778,42 @@
               { label: 'Blown fuse diagnostic',        desc: 'Diagnosed no-cooling complaint by checking 24V control circuit and found blown fuse; replaced and verified cause.' , group: 'Repair' },
               { label: 'Disconnect replacement',       desc: 'Replaced damaged or missing disconnect after confirming loss of power to unit.' , group: 'Repair' },
             ],
+            'Furnace Swap (636)': [
+              { label: 'Remove old furnace', desc: 'Removed existing furnace and disconnected gas, electrical, and venting connections.', group: 'Install' },
+              { label: 'Set & connect furnace', desc: 'Set new furnace in place, leveled and secured, and connected to existing supply and return plenum.', group: 'Install' },
+              { label: 'Seal plenum & ducts', desc: 'Sealed all plenum and duct joints with aluminum tape.', group: 'Install' },
+              { label: 'CSA 636 venting', desc: 'Ran new CSA 636 certified flue exhaust and combustion air intake pipe through exterior wall with approved termination caps.', group: 'Install' },
+              { label: 'Gas connection & drip leg', desc: 'Connected gas supply line and installed drip leg per code.', group: 'Install' },
+              { label: 'Thermostat wiring', desc: 'Wired thermostat and verified low voltage control wiring.', group: 'Install' },
+              { label: 'Condensate drain', desc: 'Ran condensate drain line with trap to an approved drainage point.', group: 'Install' },
+              { label: 'Startup & CO verification', desc: 'Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.', group: 'Install' },
+              { label: 'Furnace disconnect', desc: 'Connected electrical disconnect and verified power to furnace.', group: 'Add-ons' },
+              { label: 'Ductwork fabrication', desc: 'Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape.', group: 'Add-ons' },
+              { label: 'LP conversion', desc: "Converted manifold and gas valve for propane (LP) gas operation per manufacturer's conversion kit.", group: 'Add-ons' },
+            ],
+            'Furnace & A/C Install': [
+              { label: 'Remove old furnace', desc: 'Removed existing furnace and disconnected gas, electrical, and venting connections.', group: 'Install' },
+              { label: 'Recover refrigerant', desc: 'Recovered refrigerant from system using certified recovery equipment.', group: 'Install' },
+              { label: 'Remove wiring', desc: 'Removed low voltage and high voltage wiring in preparation for equipment replacement.', group: 'Install' },
+              { label: 'Set & connect furnace', desc: 'Set new furnace in place, leveled and secured, and connected to existing supply and return plenum.', group: 'Install' },
+              { label: 'Ductwork fabrication', desc: 'Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape.', group: 'Install' },
+              { label: 'Gas connection & drip leg', desc: 'Connected gas supply line and installed drip leg per code.', group: 'Install' },
+              { label: 'Thermostat wiring', desc: 'Wired thermostat and verified low voltage control wiring.', group: 'Install' },
+              { label: 'Furnace condensate drain', desc: 'Ran condensate drain line with trap to an approved drainage point.', group: 'Install' },
+              { label: 'Mount evaporator coil', desc: 'Mounted indoor evaporator coil on furnace plenum with sheet metal transitions, S cleat, and drive cleats. Sealed all duct connections with aluminum tape.', group: 'Install' },
+              { label: 'Set condenser pad', desc: 'Set outdoor condenser on pad and leveled for proper drainage.', group: 'Install' },
+              { label: 'Line set & braze', desc: 'Ran refrigerant line set through exterior wall and brazed connections under nitrogen purge.', group: 'Install' },
+              { label: 'Insulate & seal line set', desc: 'Insulated and sealed all line set penetrations and openings.', group: 'Install' },
+              { label: 'Reinstall wiring', desc: 'Reinstalled low voltage and high voltage wiring to new equipment.', group: 'Install' },
+              { label: 'Pressure test, vacuum & charge', desc: 'Pressure tested system to 400 PSI, evacuated to 500 microns, and charged with refrigerant to manufacturer specification.', group: 'Install' },
+              { label: 'A/C condensate drain', desc: 'Installed PVC condensate drain line with trap.', group: 'Install' },
+              { label: 'Furnace startup & CO verification', desc: 'Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.', group: 'Install' },
+              { label: 'A/C system test', desc: 'Tested air conditioning in cooling mode and verified refrigerant pressures and supply air temperatures.', group: 'Install' },
+              { label: 'CSA 636 venting', desc: 'Ran new CSA 636 certified flue exhaust and combustion air intake pipe through exterior wall with approved termination caps.', group: 'Add-ons' },
+              { label: 'Furnace disconnect', desc: 'Connected electrical disconnect and verified power to furnace.', group: 'Add-ons' },
+              { label: 'A/C disconnect & whip', desc: 'Installed disconnect box and electrical whip for outdoor unit.', group: 'Add-ons' },
+              { label: 'LP conversion', desc: "Converted manifold and gas valve for propane (LP) gas operation per manufacturer's conversion kit.", group: 'Add-ons' },
+            ],
             'Mini-Split System': [
               { label: 'Filter cleaning',          desc: 'Removed and cleaned indoor unit filters to restore proper airflow.' , group: 'Maintenance' },
               { label: 'Refrigerant leak check',   desc: 'Inspected refrigerant line set connections and service valves for leaks.' , group: 'Maintenance' },
@@ -5280,7 +5322,7 @@
         if (lbl) lbl.textContent = equip + ' — tap to add to description:';
 
         // Group tasks by their group field, render subheadings
-        const GROUP_ORDER = ['Maintenance', 'Install', 'Repair', 'Misc'];
+        const GROUP_ORDER = ['Maintenance', 'Install', 'Repair', 'Add-ons', 'Misc'];
         const grouped = {};
         tasks.forEach(task => {
           const g = task.group || 'Maintenance';
@@ -9306,6 +9348,7 @@
         { desc:'Pool Heater Flue Collar / Vent Cap',unit:'ea',  distributorCost:30,   markup:25, customerPrice:37.5,  category:'poolheater' },
       ];
       const JOB_TYPE_TO_QA_CAT = {
+        'furnace swap':'install','furnace & ac':'install','furnace & a/c':'install',
         'furnace install':'install','furnace installation':'install','ac install':'install','ac installation':'install',
         'air conditioner install':'install','ductless install':'install','ductless split':'install','mini-split install':'install',
         'water heater install':'waterheater','tankless':'waterheater',
